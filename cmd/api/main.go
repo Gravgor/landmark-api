@@ -1,6 +1,7 @@
 package main
 
 import (
+	"landmark-api/cmd/logger"
 	"landmark-api/internal/api/controllers"
 	"landmark-api/internal/api/handlers"
 	"landmark-api/internal/database"
@@ -15,6 +16,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"github.com/rs/cors"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -65,6 +67,7 @@ func main() {
 	rateLimiter := middleware.NewRateLimiter()
 
 	router := mux.NewRouter()
+	router.Use(middleware.LoggingMiddleware)
 
 	// Public routes
 	router.HandleFunc("/auth/register", authHandler.Register).Methods("POST")
@@ -118,7 +121,9 @@ func main() {
 	}
 
 	// Start server
-	log.Printf("Server starting on port %s...", getPort())
+	logger.LogEvent(logrus.InfoLevel, "API started", logrus.Fields{
+		"port": "8080",
+	})
 	log.Fatal(srv.ListenAndServe())
 }
 
