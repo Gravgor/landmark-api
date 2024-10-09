@@ -126,6 +126,32 @@ func (h *LandmarkHandler) ListLandmarksByCountry(w http.ResponseWriter, r *http.
 	respondWithJSON(w, http.StatusOK, response)
 }
 
+func (h *LandmarkHandler) ListLandmarkByCategory(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+	category := vars["category"]
+	queryParams := parseQueryParams(r)
+
+	subscription, ok := services.SubscriptionFromContext(ctx)
+	if !ok {
+		respondWithError(w, http.StatusForbidden, "Subscription not found")
+		return
+	}
+
+	query := h.db.Model(&models.Landmark{}).Where("category = ?", category)
+	query = applyFilters(query, queryParams.Filters)
+	query = applySorting(query, queryParams.SortBy, queryParams.SortOrder)
+	var landmarks []models.Landmark
+	if err := query.Offset(queryParams.Offset).Limit(queryParams.Limit).Find(&landmarks).Error; err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error fetching landmarks")
+		return
+	}
+
+	response := h.processLandmarkList(ctx, landmarks, subscription, queryParams)
+	respondWithJSON(w, http.StatusOK, response)
+
+}
+
 func (h *LandmarkHandler) ListLandmarksByName(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
