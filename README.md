@@ -229,6 +229,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📧 Contact
 
-Your Name - marceliborowczak@example.com
+Marceli Borowczak - marceliborowczak@example.com
 
 Project Link: [https://github.com/Gravgor/landmark-api](https://github.com/Gravgor/landmark-api)
