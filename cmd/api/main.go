@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"landmark-api/internal/api/handlers"
+	"landmark-api/internal/database"
 	"landmark-api/internal/middleware"
 	"landmark-api/internal/repository"
 	"landmark-api/internal/services"
@@ -14,9 +14,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"github.com/rs/cors"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
 func main() {
@@ -26,7 +23,7 @@ func main() {
 	}
 
 	// Initialize database connection
-	db, err := initDB()
+	db, err := database.InitDB()
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
@@ -37,18 +34,15 @@ func main() {
 		log.Fatal("Failed to get underlying *sql.DB instance:", err)
 	}
 
-	// Configure connection pool
 	sqlDB.SetMaxOpenConns(25)
 	sqlDB.SetMaxIdleConns(25)
 	sqlDB.SetConnMaxLifetime(5 * time.Minute)
 
-	// Initialize repositories
 	userRepo := repository.NewUserRepository(db)
 	subscriptionRepo := repository.NewSubscriptionRepository(db)
 	landmarkRepo := repository.NewLandmarkRepository(db)
 	apiKeyRepo := repository.NewAPIKeyRepository(db)
 
-	// Initialize services
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
 		log.Fatal("JWT_SECRET environment variable is required")
@@ -64,14 +58,11 @@ func main() {
 	)
 	landmarkService := services.NewLandmarkService(landmarkRepo)
 
-	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
 	landmarkHandler := handlers.NewLandmarkHandler(landmarkService, db)
 
-	// Initialize rate limiter
 	rateLimiter := middleware.NewRateLimiter()
 
-	// Initialize router
 	router := mux.NewRouter()
 
 	// Public routes
@@ -128,43 +119,6 @@ func main() {
 	// Start server
 	log.Printf("Server starting on port %s...", getPort())
 	log.Fatal(srv.ListenAndServe())
-}
-
-func initDB() (*gorm.DB, error) {
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		return nil, fmt.Errorf("DATABASE_URL environment variable is required")
-	}
-
-	// Configure GORM logger
-	gormLogger := logger.New(
-		log.New(os.Stdout, "\r\n", log.LstdFlags),
-		logger.Config{
-			SlowThreshold:             time.Second,
-			LogLevel:                  logger.Info,
-			IgnoreRecordNotFoundError: true,
-			Colorful:                  true,
-		},
-	)
-
-	// Open connection
-	db, err := gorm.Open(postgres.Open(dbURL), &gorm.Config{
-		Logger: gormLogger,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("error opening database: %v", err)
-	}
-
-	if err := autoMigrate(db); err != nil {
-		return nil, fmt.Errorf("error migrating database: %v", err)
-	}
-	//migrations.MigrateLandmarks(db)
-
-	return db, nil
-}
-
-func autoMigrate(db *gorm.DB) error {
-	return db.AutoMigrate()
 }
 
 func getPort() string {
