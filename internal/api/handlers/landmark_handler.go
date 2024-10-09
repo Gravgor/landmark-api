@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -152,6 +153,66 @@ func (h *LandmarkHandler) ListLandmarkByCategory(w http.ResponseWriter, r *http.
 
 }
 
+// Define a struct for the search request
+type SearchRequest struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	Radius    float64 `json:"radius"` // in kilometers
+}
+
+// Function to calculate distance using Haversine formula
+func haversine(lat1, lon1, lat2, lon2 float64) float64 {
+	const R = 6371 // Radius of Earth in kilometers
+	dLat := (lat2 - lat1) * (math.Pi / 180)
+	dLon := (lon2 - lon1) * (math.Pi / 180)
+
+	a := math.Sin(dLat/2)*math.Sin(dLat/2) +
+		math.Cos(lat1*(math.Pi/180))*math.Cos(lat2*(math.Pi/180))*
+			math.Sin(dLon/2)*math.Sin(dLon/2)
+	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+
+	return R * c
+}
+
+// SearchLandmarks - Searches landmarks within a given radius
+func (h *LandmarkHandler) SearchLandmarks(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	subscription, ok := services.SubscriptionFromContext(ctx)
+	if !ok || subscription.PlanType != models.ProPlan {
+		respondWithError(w, http.StatusForbidden, "Forbidden: Pro subscription required")
+		return
+	}
+	var req SearchRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	var landmarks []models.Landmark
+	if err := h.db.Find(&landmarks).Error; err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error fetching landmarks")
+		return
+	}
+
+	var results []models.Landmark
+	for _, landmark := range landmarks {
+		distance := haversine(req.Latitude, req.Longitude, landmark.Latitude, landmark.Longitude)
+		if distance <= req.Radius {
+			results = append(results, landmark)
+		}
+	}
+
+	response := h.processLandmarkList(ctx, results, subscription, QueryParams{
+		Limit:     len(results),        // Set limit to the number of results found
+		Offset:    0,                   // No offset for this search
+		SortBy:    "",                  // No specific sorting needed
+		SortOrder: "asc",               // Default order
+		Fields:    []string{},          // No field filtering specified
+		Filters:   map[string]string{}, // No filters
+	})
+
+	respondWithJSON(w, http.StatusOK, response)
+}
 func (h *LandmarkHandler) ListLandmarksByName(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
