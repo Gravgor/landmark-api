@@ -1,3 +1,4 @@
+
 # Landmark API
 
 A RESTful API built with Go that provides information about famous landmarks around the world, using GORM as the ORM.
@@ -12,10 +13,17 @@ landmark-api/
 │   ├── api/
 │   │   ├── handlers/
 │   │   │   └── landmarks.go
+│   │   ├── middleware/
+│   │   │   └── api_key.go
 │   │   └── routes.go
 │   ├── db/
 │   │   └── database.go
-│   └── models/
+│   ├── models/
+│   │   ├── landmark.go
+│   │   └── subscription.go
+│   └── services/
+│       ├── api_key.go
+│       ├── auth.go
 │       └── landmark.go
 ├── .env
 ├── go.mod
@@ -49,13 +57,14 @@ go get -u gorm.io/driver/postgres
 go get -u github.com/joho/godotenv
 ```
 
-4. Create a .env file:
+4. Create a `.env` file:
 ```
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=your_username
 DB_PASSWORD=your_password
 DB_NAME=landmark_db
+JWT_SECRET=your_jwt_secret
 ```
 
 ## Running the Application
@@ -64,24 +73,35 @@ DB_NAME=landmark_db
 go run cmd/api/main.go
 ```
 
-The server will start on port 8080.
+The server will start on port `8080`.
 
 ## API Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET    | /api/landmarks | Get all landmarks |
-| GET    | /api/landmarks/{id} | Get a specific landmark |
-| GET    | /api/landmarks/country/{country} | Get landmarks by country |
-| POST   | /api/landmarks | Create a new landmark |
-| PUT    | /api/landmarks/{id} | Update a landmark |
-| DELETE | /api/landmarks/{id} | Delete a landmark |
+| Method | Endpoint                          | Description                                   |
+|--------|-----------------------------------|-----------------------------------------------|
+| GET    | /api/v1/landmarks                 | Get all landmarks                             |
+| GET    | /api/v1/landmarks/{id}            | Get a specific landmark                       |
+| GET    | /api/v1/landmarks/{id}/details    | Get detailed information for a landmark      |
+| GET    | /api/v1/landmarks/country/{country} | Get landmarks by country                     |
+| POST   | /api/v1/landmarks                 | Create a new landmark                         |
+| PUT    | /api/v1/landmarks/{id}            | Update a landmark                             |
+| DELETE | /api/v1/landmarks/{id}            | Delete a landmark                             |
+| POST   | /auth/register                     | Register a new user                           |
+| POST   | /auth/login                        | Login a user and return JWT token            |
+
+## Authentication
+
+The API uses JWT for authentication. To access protected routes, users need to register and login to obtain a token.
+
+## API Keys
+
+Each user has an associated API key, which must be included in the request headers as `x-api-key`. This allows users to manage their subscription plans and access different levels of detail based on their subscription tier.
 
 ## Example Requests/Responses
 
 ### Get All Landmarks
 ```
-GET /api/landmarks
+GET /api/v1/landmarks
 
 Response:
 [
@@ -106,7 +126,7 @@ Response:
 
 ### Create a Landmark
 ```
-POST /api/landmarks
+POST /api/v1/landmarks
 Content-Type: application/json
 
 {
@@ -132,4 +152,4 @@ go test ./...
 ```
 
 ## License
-This project is licensed under the MIT License - see the LICENSE file for details
+This project is licensed under the MIT License - see the LICENSE file for details.
