@@ -1,6 +1,7 @@
 package main
 
 import (
+	"landmark-api/internal/api/controllers"
 	"landmark-api/internal/api/handlers"
 	"landmark-api/internal/database"
 	"landmark-api/internal/middleware"
@@ -68,9 +69,7 @@ func main() {
 	// Public routes
 	router.HandleFunc("/auth/register", authHandler.Register).Methods("POST")
 	router.HandleFunc("/auth/login", authHandler.Login).Methods("POST")
-	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("OK"))
-	}).Methods("GET")
+	router.HandleFunc("/health", controllers.HealthCheckHandler(db)).Methods("GET")
 
 	// API routes (protected)
 	apiRouter := router.PathPrefix("/api/v1").Subrouter()
