@@ -1,155 +1,234 @@
-
 # Landmark API
 
-A RESTful API built with Go that provides information about famous landmarks around the world, using GORM as the ORM.
+A robust RESTful API service for managing and retrieving information about landmarks worldwide. The API provides detailed information about historical sites, monuments, and points of interest, with different access levels based on subscription tiers.
 
-## Project Structure
-```
-landmark-api/
-├── cmd/
-│   └── api/
-│       └── main.go
-├── internal/
-│   ├── api/
-│   │   ├── handlers/
-│   │   │   └── landmarks.go
-│   │   ├── middleware/
-│   │   │   └── api_key.go
-│   │   └── routes.go
-│   ├── db/
-│   │   └── database.go
-│   ├── models/
-│   │   ├── landmark.go
-│   │   └── subscription.go
-│   └── services/
-│       ├── api_key.go
-│       ├── auth.go
-│       └── landmark.go
-├── .env
-├── go.mod
-├── go.sum
-└── README.md
-```
+## 🌟 Features
 
-## Prerequisites
+- **Authentication & Authorization**
+  - JWT-based authentication
+  - Role-based access control
+  - API key management
+  - Subscription-based access tiers (Free, Pro, Enterprise)
 
-- Go 1.19 or later
-- PostgreSQL 12 or later
+- **Landmark Information**
+  - Comprehensive landmark details
+  - Geolocation data
+  - Historical information
+  - Visitor information
+  - Accessibility details
+  - Opening hours and ticket prices
 
-## Setup Instructions
+- **Advanced Querying**
+  - Field selection
+  - Pagination
+  - Sorting
+  - Filtering
+  - Full-text search
+
+- **Performance & Scalability**
+  - Redis caching
+  - Rate limiting
+  - Connection pooling
+  - Optimized database queries
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Go 1.19 or higher
+- PostgreSQL 13 or higher
+- Redis 6.x or higher
+- Docker (optional)
+
+### Environment Setup
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/Gravgor/landmark-api.git
 cd landmark-api
 ```
 
-2. Initialize the Go module:
+2. Create a `.env` file in the project root:
+```env
+# Server Configuration
+PORT=5050
+ENV=development
+
+# Database Configuration
+DATABASE_URL=postgresql://username:password@localhost:5432/landmark_db?sslmode=disable
+
+# Redis Configuration
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=your_redis_password
+
+# JWT Configuration
+JWT_SECRET=your_jwt_secret_key
+
+# Rate Limiting
+RATE_LIMIT=100
+RATE_LIMIT_DURATION=1h
+```
+
+### Running the Application
+
+#### Local Development
+
+1. Install dependencies:
 ```bash
-go mod init landmark-api
+go mod download
 ```
 
-3. Install dependencies:
+2. Start the database and Redis (if using Docker):
 ```bash
-go get -u github.com/gorilla/mux
-go get -u gorm.io/gorm
-go get -u gorm.io/driver/postgres
-go get -u github.com/joho/godotenv
+docker-compose up -d postgres redis
 ```
 
-4. Create a `.env` file:
-```
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=your_username
-DB_PASSWORD=your_password
-DB_NAME=landmark_db
-JWT_SECRET=your_jwt_secret
+3. Run migrations:
+```bash
+go run cmd/migrate/main.go
 ```
 
-## Running the Application
+4. Start the server:
+```bash
+go run main.go
+```
+
+#### Using Docker
 
 ```bash
-go run cmd/api/main.go
+docker-compose up -d
 ```
 
-The server will start on port `8080`.
+## 📖 API Documentation
 
-## API Endpoints
+### Authentication
 
-| Method | Endpoint                          | Description                                   |
-|--------|-----------------------------------|-----------------------------------------------|
-| GET    | /api/v1/landmarks                 | Get all landmarks                             |
-| GET    | /api/v1/landmarks/{id}            | Get a specific landmark                       |
-| GET    | /api/v1/landmarks/{id}/details    | Get detailed information for a landmark      |
-| GET    | /api/v1/landmarks/country/{country} | Get landmarks by country                     |
-| POST   | /api/v1/landmarks                 | Create a new landmark                         |
-| PUT    | /api/v1/landmarks/{id}            | Update a landmark                             |
-| DELETE | /api/v1/landmarks/{id}            | Delete a landmark                             |
-| POST   | /auth/register                     | Register a new user                           |
-| POST   | /auth/login                        | Login a user and return JWT token            |
-
-## Authentication
-
-The API uses JWT for authentication. To access protected routes, users need to register and login to obtain a token.
-
-## API Keys
-
-Each user has an associated API key, which must be included in the request headers as `x-api-key`. This allows users to manage their subscription plans and access different levels of detail based on their subscription tier.
-
-## Example Requests/Responses
-
-### Get All Landmarks
-```
-GET /api/v1/landmarks
-
-Response:
-[
-  {
-    "id": 1,
-    "name": "Eiffel Tower",
-    "country": "France",
-    "city": "Paris",
-    "description": "Iconic iron lattice tower on the Champ de Mars",
-    "height": 324,
-    "yearBuilt": 1889,
-    "architect": "Gustave Eiffel",
-    "visitorsPerYear": 7000000,
-    "imageUrl": "/api/placeholder/800/600",
-    "latitude": 48.8584,
-    "longitude": 2.2945,
-    "createdAt": "2024-02-20T10:00:00Z",
-    "updatedAt": "2024-02-20T10:00:00Z"
-  }
-]
-```
-
-### Create a Landmark
-```
-POST /api/v1/landmarks
+#### Register a new user
+```http
+POST /auth/register
 Content-Type: application/json
 
 {
-  "name": "Colosseum",
-  "country": "Italy",
-  "city": "Rome",
-  "description": "Ancient amphitheater in the center of Rome",
-  "height": 48,
-  "yearBuilt": 80,
-  "architect": "Vespasian",
-  "visitorsPerYear": 7000000,
-  "imageUrl": "/api/placeholder/800/600",
-  "latitude": 41.8902,
-  "longitude": 12.4922
+  "email": "user@example.com",
+  "password": "securepassword",
+  "name": "John Doe"
 }
 ```
 
-## Development
+#### Login
+```http
+POST /auth/login
+Content-Type: application/json
 
-### Running Tests
-```bash
-go test ./...
+{
+  "email": "user@example.com",
+  "password": "securepassword"
+}
 ```
 
-## License
-This project is licensed under the MIT License - see the LICENSE file for details.
+### Landmarks
+
+#### Get all landmarks
+```http
+GET /api/v1/landmarks
+Authorization: Bearer <your_jwt_token>
+X-API-Key: <your_api_key>
+```
+
+Query Parameters:
+- `limit` (default: 10)
+- `offset` (default: 0)
+- `sort` (e.g., "-name" for descending order)
+- `fields` (comma-separated list of fields)
+- Additional filters as query parameters
+
+#### Get landmark by ID
+```http
+GET /api/v1/landmarks/{id}
+Authorization: Bearer <your_jwt_token>
+X-API-Key: <your_api_key>
+```
+
+#### Get landmarks by country
+```http
+GET /api/v1/landmarks/country/{country}
+Authorization: Bearer <your_jwt_token>
+X-API-Key: <your_api_key>
+```
+
+#### Search landmarks by name
+```http
+GET /api/v1/landmarks/name/{name}
+Authorization: Bearer <your_jwt_token>
+X-API-Key: <your_api_key>
+```
+
+### Subscription Tiers
+
+| Feature                    | Free Plan | Pro Plan | Enterprise Plan |
+|---------------------------|-----------|-----------|-----------------|
+| Basic landmark info       | ✓         | ✓         | ✓               |
+| Detailed descriptions     | ✗         | ✓         | ✓               |
+| Historical significance   | ✗         | ✓         | ✓               |
+| Visitor tips              | ✗         | ✓         | ✓               |
+| Real-time data           | ✗         | ✗         | ✓               |
+| Rate limit               | 100/hour  | 1000/hour | Unlimited       |
+
+## 🛠 Project Structure
+
+```
+landmark-api/
+├── cmd/
+│   └── migrate/
+│       └── main.go
+├── internal/
+│   ├── api/
+│   │   └── handlers/
+│   ├── cache/
+│   ├── middleware/
+│   ├── models/
+│   ├── repository/
+│   └── services/
+├── migrations/
+├── docker-compose.yml
+├── Dockerfile
+├── go.mod
+├── go.sum
+├── main.go
+└── README.md
+```
+
+## 🔒 Security
+
+- All endpoints except `/auth/register` and `/auth/login` require authentication
+- Passwords are hashed using bcrypt
+- Rate limiting is implemented per API key
+- Input validation and sanitization
+- Prepared statements for database queries
+- Environment-based configuration
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [Gorilla Mux](https://github.com/gorilla/mux) for routing
+- [GORM](https://gorm.io) for database operations
+- [JWT-Go](https://github.com/golang-jwt/jwt) for JWT authentication
+- [Go-Redis](https://github.com/go-redis/redis) for caching
+
+## 📧 Contact
+
+Your Name - marceliborowczak@example.com
+
+Project Link: [https://github.com/Gravgor/landmark-api](https://github.com/Gravgor/landmark-api)

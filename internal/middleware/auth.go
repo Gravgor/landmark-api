@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"landmark-api/internal/services"
 	"net/http"
 	"strings"
@@ -14,9 +15,9 @@ func AuthMiddleware(authService services.AuthService) func(http.Handler) http.Ha
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
-
 			user, subscription, err := authService.VerifyToken(tokenString)
 			if err != nil {
+				fmt.Print(err)
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}

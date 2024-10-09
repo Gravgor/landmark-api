@@ -17,6 +17,8 @@ type LandmarkRepository interface {
 	Update(ctx context.Context, landmark *models.Landmark) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	GetDetails(ctx context.Context, id uuid.UUID) (*models.LandmarkDetail, error)
+	FindByCountry(ctx context.Context, country string) ([]models.Landmark, error)
+	FindByName(ctx context.Context, name string) ([]models.Landmark, error)
 }
 
 type landmarkRepository struct {
@@ -106,4 +108,27 @@ func (r *landmarkRepository) GetDetails(ctx context.Context, id uuid.UUID) (*mod
 	}
 
 	return &detail, nil
+}
+
+// FindByCountry retrieves landmarks by country from the database.
+func (r *landmarkRepository) FindByCountry(ctx context.Context, country string) ([]models.Landmark, error) {
+	var landmarks []models.Landmark
+
+	err := r.db.WithContext(ctx).
+		Where("country = ?", country).
+		Order("created_at DESC").
+		Find(&landmarks).Error
+	return landmarks, err
+}
+
+// FindByName retrieves landmarks by name from the database.
+func (r *landmarkRepository) FindByName(ctx context.Context, name string) ([]models.Landmark, error) {
+	var landmarks []models.Landmark
+
+	err := r.db.WithContext(ctx).
+		Where("name ILIKE ?", "%"+name+"%").
+		Order("created_at DESC").
+		Find(&landmarks).Error
+
+	return landmarks, err
 }

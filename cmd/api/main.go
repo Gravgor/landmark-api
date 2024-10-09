@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"landmark-api/internal/api/handlers"
 	"landmark-api/internal/middleware"
-	"landmark-api/internal/models"
 	"landmark-api/internal/repository"
 	"landmark-api/internal/services"
 	"log"
@@ -66,7 +65,7 @@ func main() {
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
-	landmarkHandler := handlers.NewLandmarkHandler(landmarkService)
+	landmarkHandler := handlers.NewLandmarkHandler(landmarkService, db)
 
 	// Initialize rate limiter
 	rateLimiter := middleware.NewRateLimiter()
@@ -90,8 +89,8 @@ func main() {
 	// Landmarks routes
 	apiRouter.HandleFunc("/landmarks", landmarkHandler.ListLandmarks).Methods("GET")
 	apiRouter.HandleFunc("/landmarks/{id}", landmarkHandler.GetLandmark).Methods("GET")
-	apiRouter.HandleFunc("/landmarks/{id}/details", landmarkHandler.GetLandmarkDetails).Methods("GET")
-
+	apiRouter.HandleFunc("/landmarks/country/{country}", landmarkHandler.ListLandmarksByCountry).Methods("GET")
+	apiRouter.HandleFunc("/landmarks/name/{name}", landmarkHandler.ListLandmarksByName).Methods("GET")
 	// Create server with timeouts
 	srv := &http.Server{
 		Handler:      router,
@@ -130,21 +129,16 @@ func initDB() (*gorm.DB, error) {
 		return nil, fmt.Errorf("error opening database: %v", err)
 	}
 
-	// Auto-migrate the schema
 	if err := autoMigrate(db); err != nil {
 		return nil, fmt.Errorf("error migrating database: %v", err)
 	}
+	//migrations.MigrateLandmarks(db)
 
 	return db, nil
 }
 
 func autoMigrate(db *gorm.DB) error {
-	return db.AutoMigrate(
-		&models.User{},
-		&models.Subscription{},
-		&models.Landmark{},
-		&models.LandmarkDetail{},
-	)
+	return db.AutoMigrate()
 }
 
 func getPort() string {

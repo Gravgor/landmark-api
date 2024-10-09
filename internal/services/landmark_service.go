@@ -13,6 +13,8 @@ type LandmarkService interface {
 	GetLandmark(ctx context.Context, id uuid.UUID) (*models.Landmark, error)
 	ListLandmarks(ctx context.Context, page, pageSize int) ([]models.Landmark, error)
 	GetLandmarkDetails(ctx context.Context, id uuid.UUID, userSubscription models.SubscriptionPlan) (*models.LandmarkDetail, error)
+	GetLandmarksByCountry(ctx context.Context, country string) ([]models.Landmark, error)
+	GetLandmarksByName(ctx context.Context, name string) ([]models.Landmark, error)
 }
 
 type landmarkService struct {
@@ -37,4 +39,14 @@ func (s *landmarkService) GetLandmarkDetails(ctx context.Context, id uuid.UUID, 
 		return nil, errors.ErrInsufficientSubscription
 	}
 	return s.landmarkRepo.GetDetails(ctx, id)
+}
+
+// GetLandmarksByCountry retrieves landmarks by country from the repository.
+func (s *landmarkService) GetLandmarksByCountry(ctx context.Context, country string) ([]models.Landmark, error) {
+	return s.landmarkRepo.FindByCountry(ctx, country)
+}
+
+// GetLandmarksByName retrieves landmarks by name from the repository.
+func (s *landmarkService) GetLandmarksByName(ctx context.Context, name string) ([]models.Landmark, error) {
+	return s.landmarkRepo.FindByName(ctx, name)
 }
