@@ -316,8 +316,10 @@ func (h *LandmarkHandler) filterBasicLandmarkInfo(landmark *models.Landmark) map
 // mergeLandmarkAndDetails combines landmark data with its details based on subscription
 func (h *LandmarkHandler) mergeLandmarkAndDetails(landmark *models.Landmark, details *models.LandmarkDetail) map[string]interface{} {
 	merged := h.filterBasicLandmarkInfo(landmark)
-
-	// Add detailed information
+	weatherData, err := services.FetchWeatherData(landmark.Latitude, landmark.Longitude)
+	if err != nil {
+		fmt.Print("Error with weather")
+	}
 	if details != nil {
 		additionalInfo := map[string]interface{}{
 			"opening_hours":           details.OpeningHours,
@@ -325,6 +327,7 @@ func (h *LandmarkHandler) mergeLandmarkAndDetails(landmark *models.Landmark, det
 			"historical_significance": details.HistoricalSignificance,
 			"visitor_tips":            details.VisitorTips,
 			"accessibility_info":      details.AccessibilityInfo,
+			"weather_info":            weatherData,
 		}
 
 		// Add weather info for enterprise plan
