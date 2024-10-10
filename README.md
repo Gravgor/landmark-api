@@ -17,6 +17,7 @@ A robust RESTful API service for managing and retrieving information about landm
   - Visitor information
   - Accessibility details
   - Opening hours and ticket prices
+  - Live Data (Weather, Public transport)
 
 - **Advanced Querying**
   - Field selection
