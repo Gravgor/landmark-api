@@ -5,3 +5,5 @@
 {"ip":"127.0.0.1:59735","level":"info","method":"POST","msg":"Request handled","response_time":553,"status_code":401,"time":"2024-10-10T01:05:27+02:00","url":"/auth/login"}
 {"ip":"127.0.0.1:59742","level":"info","method":"POST","msg":"Request handled","response_time":2558,"status_code":200,"time":"2024-10-10T01:05:46+02:00","url":"/api/v1/landmarks/search"}
 {"level":"info","msg":"API started","port":"8080","time":"2024-10-10T14:41:05+02:00"}
+{"ip":"127.0.0.1:53596","level":"info","method":"GET","msg":"Request handled","response_time":5039,"status_code":200,"time":"2024-10-10T14:41:35+02:00","url":"/api/v1/landmarks"}
+{"ip":"127.0.0.1:53605","level":"info","method":"GET","msg":"Request handled","response_time":864,"status_code":200,"time":"2024-10-10T14:41:39+02:00","url":"/api/v1/landmarks"}
