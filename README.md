@@ -25,6 +25,8 @@ A robust RESTful API service for managing and retrieving information about landm
   - Sorting
   - Filtering
   - Full-text search
+  - Search by coordinates with radius
+  - Search by category
 
 - **Performance & Scalability**
   - Redis caching
