@@ -1,6 +1,7 @@
 package main
 
 import (
+	"landmark-api/cmd/config"
 	"landmark-api/cmd/logger"
 	"landmark-api/internal/api/controllers"
 	"landmark-api/internal/api/handlers"
@@ -37,6 +38,12 @@ func main() {
 		log.Fatal("Failed to get underlying *sql.DB instance:", err)
 	}
 
+	cacheConfig := config.NewCacheConfig()
+	cacheService, err := services.NewRedisCacheService(cacheConfig)
+	if err != nil {
+		log.Fatal("Failed to initialize cache service")
+	}
+
 	sqlDB.SetMaxOpenConns(25)
 	sqlDB.SetMaxIdleConns(25)
 	sqlDB.SetConnMaxLifetime(5 * time.Minute)
@@ -62,7 +69,7 @@ func main() {
 	landmarkService := services.NewLandmarkService(landmarkRepo)
 
 	authHandler := handlers.NewAuthHandler(authService)
-	landmarkHandler := handlers.NewLandmarkHandler(landmarkService, db)
+	landmarkHandler := handlers.NewLandmarkHandler(landmarkService, cacheService, db)
 
 	rateLimiter := middleware.NewRateLimiter()
 

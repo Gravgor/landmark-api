@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -19,6 +21,7 @@ import (
 
 type LandmarkHandler struct {
 	landmarkService services.LandmarkService
+	cacheService    services.CacheService
 	db              *gorm.DB
 }
 
@@ -31,11 +34,16 @@ type QueryParams struct {
 	Filters   map[string]string
 }
 
-func NewLandmarkHandler(landmarkService services.LandmarkService, db *gorm.DB) *LandmarkHandler {
+func NewLandmarkHandler(landmarkService services.LandmarkService, cs services.CacheService, db *gorm.DB) *LandmarkHandler {
 	return &LandmarkHandler{
 		landmarkService: landmarkService,
+		cacheService:    cs,
 		db:              db,
 	}
+}
+
+func (h *LandmarkHandler) getCacheKey(params ...string) string {
+	return fmt.Sprintf("landmark:%s", strings.Join(params, ":"))
 }
 
 // GetLandmark - Enhanced with caching and field selection
@@ -50,15 +58,22 @@ func (h *LandmarkHandler) GetLandmark(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Try to get from cache first
-	/*cacheKey := fmt.Sprintf("landmark:%s", id)
-	cachedData, err := h.cache.Get(ctx, cacheKey).Result()
-	if err == nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("X-Cache", "HIT")
-		fmt.Fprint(w, cachedData)
+	subscription, ok := services.SubscriptionFromContext(ctx)
+	if !ok {
+		respondWithError(w, http.StatusForbidden, "Subscription not found")
 		return
-	}*/
+	}
+
+	// Try to get from cache
+	cacheKey := h.getCacheKey("id", idStr, string(subscription.PlanType))
+	if cachedData, err := h.cacheService.Get(ctx, cacheKey); err == nil {
+		var response interface{}
+		if err := json.Unmarshal([]byte(cachedData), &response); err == nil {
+			w.Header().Set("X-Cache", "HIT")
+			respondWithJSON(w, http.StatusOK, response)
+			return
+		}
+	}
 
 	landmark, subscription, err := h.getLandmarkAndSubscription(ctx, id, w)
 	if err != nil {
@@ -68,13 +83,12 @@ func (h *LandmarkHandler) GetLandmark(w http.ResponseWriter, r *http.Request) {
 	response := h.prepareResponse(ctx, landmark, subscription, parseQueryParams(r))
 
 	// Cache the response
-	//jsonResponse, _ := json.Marshal(response)
-	//h.cache.Set(ctx, cacheKey, jsonResponse, 1*time.Hour)
-
+	h.cacheService.Set(ctx, cacheKey, response, 15*time.Minute)
+	w.Header().Set("X-Cache", "MISS")
 	respondWithJSON(w, http.StatusOK, response)
 }
 
-// ListLandmarks - Enhanced with filtering, sorting, and field selection
+// ListLandmarks with caching
 func (h *LandmarkHandler) ListLandmarks(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	queryParams := parseQueryParams(r)
@@ -85,7 +99,23 @@ func (h *LandmarkHandler) ListLandmarks(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Build the database query
+	// Generate cache key based on query parameters
+	cacheKey := h.getCacheKey("list",
+		fmt.Sprintf("limit:%d", queryParams.Limit),
+		fmt.Sprintf("offset:%d", queryParams.Offset),
+		fmt.Sprintf("sort:%s:%s", queryParams.SortBy, queryParams.SortOrder),
+		string(subscription.PlanType))
+
+	// Try to get from cache
+	if cachedData, err := h.cacheService.Get(ctx, cacheKey); err == nil {
+		var response interface{}
+		if err := json.Unmarshal([]byte(cachedData), &response); err == nil {
+			w.Header().Set("X-Cache", "HIT")
+			respondWithJSON(w, http.StatusOK, response)
+			return
+		}
+	}
+
 	query := h.db.Model(&models.Landmark{})
 	query = applyFilters(query, queryParams.Filters)
 	query = applySorting(query, queryParams.SortBy, queryParams.SortOrder)
@@ -97,8 +127,14 @@ func (h *LandmarkHandler) ListLandmarks(w http.ResponseWriter, r *http.Request) 
 	}
 
 	response := h.processLandmarkList(ctx, landmarks, subscription, queryParams)
+
+	// Cache the response
+	h.cacheService.Set(ctx, cacheKey, response, 15*time.Minute)
+	w.Header().Set("X-Cache", "MISS")
 	respondWithJSON(w, http.StatusOK, response)
 }
+
+// ListLandmarks - Enhanced with filtering, sorting, and field selection
 
 // ListLandmarksByCountry - Enhanced with filtering, sorting, and field selection
 func (h *LandmarkHandler) ListLandmarksByCountry(w http.ResponseWriter, r *http.Request) {
@@ -113,6 +149,23 @@ func (h *LandmarkHandler) ListLandmarksByCountry(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// Generate cache key
+	cacheKey := h.getCacheKey("country", country,
+		fmt.Sprintf("limit:%d", queryParams.Limit),
+		fmt.Sprintf("offset:%d", queryParams.Offset),
+		fmt.Sprintf("sort:%s:%s", queryParams.SortBy, queryParams.SortOrder),
+		string(subscription.PlanType))
+
+	// Try to get from cache
+	if cachedData, err := h.cacheService.Get(ctx, cacheKey); err == nil {
+		var response interface{}
+		if err := json.Unmarshal([]byte(cachedData), &response); err == nil {
+			w.Header().Set("X-Cache", "HIT")
+			respondWithJSON(w, http.StatusOK, response)
+			return
+		}
+	}
+
 	query := h.db.Model(&models.Landmark{}).Where("country = ?", country)
 	query = applyFilters(query, queryParams.Filters)
 	query = applySorting(query, queryParams.SortBy, queryParams.SortOrder)
@@ -124,6 +177,10 @@ func (h *LandmarkHandler) ListLandmarksByCountry(w http.ResponseWriter, r *http.
 	}
 
 	response := h.processLandmarkList(ctx, landmarks, subscription, queryParams)
+
+	// Cache the response
+	h.cacheService.Set(ctx, cacheKey, response, 15*time.Minute)
+	w.Header().Set("X-Cache", "MISS")
 	respondWithJSON(w, http.StatusOK, response)
 }
 
@@ -139,18 +196,65 @@ func (h *LandmarkHandler) ListLandmarkByCategory(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// Generate cache key based on category, query parameters, and subscription type
+	cacheKey := h.getCacheKey("category", category,
+		fmt.Sprintf("limit:%d", queryParams.Limit),
+		fmt.Sprintf("offset:%d", queryParams.Offset),
+		fmt.Sprintf("sort:%s:%s", queryParams.SortBy, queryParams.SortOrder),
+		string(subscription.PlanType))
+
+	// Try to get from cache first
+	if cachedData, err := h.cacheService.Get(ctx, cacheKey); err == nil {
+		var response interface{}
+		if err := json.Unmarshal([]byte(cachedData), &response); err == nil {
+			w.Header().Set("X-Cache", "HIT")
+			respondWithJSON(w, http.StatusOK, response)
+			return
+		}
+		// If unmarshal fails, log the error but continue to fetch from database
+		log.Printf("Error unmarshaling cached data: %v", err)
+	}
+
+	// Cache miss or error - fetch from database
 	query := h.db.Model(&models.Landmark{}).Where("category = ?", category)
 	query = applyFilters(query, queryParams.Filters)
 	query = applySorting(query, queryParams.SortBy, queryParams.SortOrder)
+
 	var landmarks []models.Landmark
 	if err := query.Offset(queryParams.Offset).Limit(queryParams.Limit).Find(&landmarks).Error; err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Error fetching landmarks")
 		return
 	}
 
-	response := h.processLandmarkList(ctx, landmarks, subscription, queryParams)
-	respondWithJSON(w, http.StatusOK, response)
+	// If no landmarks found, return empty result instead of error
+	if len(landmarks) == 0 {
+		emptyResponse := map[string]interface{}{
+			"data": []interface{}{},
+			"meta": map[string]interface{}{
+				"total":  0,
+				"limit":  queryParams.Limit,
+				"offset": queryParams.Offset,
+			},
+		}
 
+		// Cache the empty response too
+		h.cacheService.Set(ctx, cacheKey, emptyResponse, 15*time.Minute)
+		w.Header().Set("X-Cache", "MISS")
+		respondWithJSON(w, http.StatusOK, emptyResponse)
+		return
+	}
+
+	// Process the landmarks list based on subscription and query parameters
+	response := h.processLandmarkList(ctx, landmarks, subscription, queryParams)
+
+	// Cache the successful response
+	if err := h.cacheService.Set(ctx, cacheKey, response, 15*time.Minute); err != nil {
+		// Log cache set error but continue with response
+		log.Printf("Error setting cache: %v", err)
+	}
+
+	w.Header().Set("X-Cache", "MISS")
+	respondWithJSON(w, http.StatusOK, response)
 }
 
 // Define a struct for the search request
