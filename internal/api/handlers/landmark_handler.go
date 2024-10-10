@@ -220,9 +220,9 @@ func applyFilters(query *gorm.DB, filters map[string]string) *gorm.DB {
 
 func applySorting(query *gorm.DB, sortBy, sortOrder string) *gorm.DB {
 	allowedSortBy := map[string]bool{
-		"name": true,
-		"date": true,
-		// Add other allowed column names here
+		"name":    true,
+		"city":    true,
+		"country": true,
 	}
 
 	allowedSortOrder := map[string]bool{
