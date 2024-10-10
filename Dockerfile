@@ -1,5 +1,5 @@
-# Use the official Go image as a base
-FROM golang:1.19 AS builder
+# Use the official Go image as a base for the builder stage
+FROM golang:1.23.2 AS builder
 
 # Set the working directory
 WORKDIR /app
@@ -16,7 +16,7 @@ COPY . .
 # Build the Go application
 RUN go build -o landmark-api ./cmd/api/main.go
 
-# Create a new image from the builder
+# Create a new image from the builder stage
 FROM alpine:latest
 
 # Install necessary packages (like ca-certificates)
