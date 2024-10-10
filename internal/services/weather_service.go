@@ -3,6 +3,7 @@ package services
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"strconv"
 )
 
@@ -16,7 +17,7 @@ type WeatherData struct {
 }
 
 func FetchWeatherData(lat, lon float64) (*WeatherData, error) {
-	apiKey := "d0e23c5d2a622321138d993e9e7f9f23"
+	apiKey := os.Getenv("OPEN_WEATHER_API_KEY")
 	latStr := strconv.FormatFloat(lat, 'f', 6, 64)
 	lonStr := strconv.FormatFloat(lon, 'f', 6, 64)
 	url := "http://api.openweathermap.org/data/2.5/weather?lat=" + latStr + "&lon=" + lonStr + "&units=metric&appid=" + apiKey

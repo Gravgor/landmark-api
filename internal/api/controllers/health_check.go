@@ -3,6 +3,7 @@ package controllers
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"time"
 
 	"gorm.io/gorm"
@@ -39,9 +40,8 @@ func HealthCheckHandler(db *gorm.DB) http.HandlerFunc {
 
 		response.Status = "API is running"
 		response.Database = "Database connection is healthy"
-
-		// Check external service (example: Weather API)
-		weatherAPIURL := "http://api.openweathermap.org/data/2.5/weather?q=London&appid=d0e23c5d2a622321138d993e9e7f9f23"
+		apiKey := os.Getenv("OPEN_WEATHER_API_KEY")
+		weatherAPIURL := "http://api.openweathermap.org/data/2.5/weather?q=London&appid=" + apiKey
 		externalServiceStatus := checkExternalService(weatherAPIURL)
 		response.ExternalServices["Weather API"] = externalServiceStatus
 
