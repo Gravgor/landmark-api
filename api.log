@@ -11,3 +11,4 @@
 {"ip":"127.0.0.1:53670","level":"info","method":"GET","msg":"Request handled","response_time":857,"status_code":200,"time":"2024-10-10T14:44:27+02:00","url":"/api/v1/landmarks/category/Monument"}
 {"ip":"127.0.0.1:53678","level":"info","method":"GET","msg":"Request handled","response_time":3528,"status_code":200,"time":"2024-10-10T14:44:40+02:00","url":"/api/v1/landmarks/category/Historical Site"}
 {"ip":"127.0.0.1:53680","level":"info","method":"GET","msg":"Request handled","response_time":869,"status_code":200,"time":"2024-10-10T14:44:44+02:00","url":"/api/v1/landmarks/category/Historical Site"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-10T15:48:52+02:00"}
