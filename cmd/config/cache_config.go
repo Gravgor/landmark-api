@@ -15,9 +15,9 @@ type CacheConfig struct {
 
 func NewCacheConfig() *CacheConfig {
 	return &CacheConfig{
-		RedisHost:     getEnv("REDIS_HOST", "localhost"),
-		RedisPort:     getEnv("REDIS_PORT", "6379"),
-		RedisPassword: getEnv("REDIS_PASSWORD", ""),
+		RedisHost:     getEnv("REDISHOST", "localhost"),
+		RedisPort:     getEnv("REDISPORT", "6379"),
+		RedisPassword: getEnv("REDISPASSWORD", ""),
 		RedisDB:       0,
 		DefaultTTL:    15 * time.Minute,
 	}
