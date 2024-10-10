@@ -219,8 +219,22 @@ func applyFilters(query *gorm.DB, filters map[string]string) *gorm.DB {
 }
 
 func applySorting(query *gorm.DB, sortBy, sortOrder string) *gorm.DB {
-	if sortBy != "" {
+	allowedSortBy := map[string]bool{
+		"name": true,
+		"date": true,
+		// Add other allowed column names here
+	}
+
+	allowedSortOrder := map[string]bool{
+		"asc":  true,
+		"desc": true,
+	}
+
+	if allowedSortBy[sortBy] && allowedSortOrder[sortOrder] {
 		query = query.Order(fmt.Sprintf("%s %s", sortBy, sortOrder))
+	} else {
+		// Handle invalid sortBy or sortOrder, e.g., set default or return an error
+		query = query.Order("name asc") // Default sorting
 	}
 	return query
 }
