@@ -2,8 +2,8 @@ package repository
 
 import (
 	"context"
+	"landmark-api/internal/errors"
 	"landmark-api/internal/models"
-	"landmark-api/internal/pkg/errors"
 	"time"
 
 	"github.com/google/uuid"

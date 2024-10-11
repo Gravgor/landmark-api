@@ -1,0 +1,4 @@
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-11T20:28:15+02:00"}
+{"ip":"[::1]:50968","level":"info","method":"GET","msg":"Request handled","response_time":0,"status_code":404,"time":"2024-10-11T20:28:34+02:00","url":"/swagger"}
+{"ip":"[::1]:50968","level":"info","method":"GET","msg":"Request handled","response_time":0,"status_code":404,"time":"2024-10-11T20:28:49+02:00","url":"/swagger"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-11T20:29:15+02:00"}

@@ -1,11 +1,29 @@
+// @title Landmark API
+// @version 1.0
+// @description This is a landmark API server.
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:5050
+// @BasePath /api/v1
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name X-API-Key
 package main
 
 import (
-	"landmark-api/cmd/config"
-	"landmark-api/cmd/logger"
 	"landmark-api/internal/api/controllers"
 	"landmark-api/internal/api/handlers"
+	"landmark-api/internal/config"
 	"landmark-api/internal/database"
+	"landmark-api/internal/logger"
 	"landmark-api/internal/middleware"
 	"landmark-api/internal/repository"
 	"landmark-api/internal/services"
@@ -14,10 +32,13 @@ import (
 	"os"
 	"time"
 
+	_ "landmark-api/cmd/api/docs"
+
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 func main() {
@@ -80,6 +101,7 @@ func main() {
 	router.HandleFunc("/auth/register", authHandler.Register).Methods("POST")
 	router.HandleFunc("/auth/login", authHandler.Login).Methods("POST")
 	router.HandleFunc("/health", controllers.HealthCheckHandler(db)).Methods("GET")
+	router.HandleFunc("/swagger", httpSwagger.WrapHandler).Methods("GET")
 
 	// API routes (protected)
 	apiRouter := router.PathPrefix("/api/v1").Subrouter()

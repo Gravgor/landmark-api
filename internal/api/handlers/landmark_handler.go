@@ -46,7 +46,19 @@ func (h *LandmarkHandler) getCacheKey(params ...string) string {
 	return fmt.Sprintf("landmark:%s", strings.Join(params, ":"))
 }
 
-// GetLandmark - Enhanced with caching and field selection
+// GetLandmark godoc
+// @Summary Get a landmark by ID
+// @Description Get detailed information about a landmark
+// @Tags landmarks
+// @Accept json
+// @Produce json
+// @Param id path string true "Landmark ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 403 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/landmarks/{id} [get]
 func (h *LandmarkHandler) GetLandmark(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
@@ -88,7 +100,20 @@ func (h *LandmarkHandler) GetLandmark(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, response)
 }
 
-// ListLandmarks with caching
+// ListLandmarks godoc
+// @Summary List landmarks
+// @Description Get a list of landmarks with optional filtering and sorting
+// @Tags landmarks
+// @Accept json
+// @Produce json
+// @Param limit query int false "Number of items to return"
+// @Param offset query int false "Number of items to skip"
+// @Param sort query string false "Sort field and order (e.g., '-name' for descending)"
+// @Param fields query string false "Comma-separated list of fields to include"
+// @Success 200 {object} map[string]interface{}
+// @Failure 403 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/landmarks [get]
 func (h *LandmarkHandler) ListLandmarks(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	queryParams := parseQueryParams(r)
@@ -134,9 +159,21 @@ func (h *LandmarkHandler) ListLandmarks(w http.ResponseWriter, r *http.Request) 
 	respondWithJSON(w, http.StatusOK, response)
 }
 
-// ListLandmarks - Enhanced with filtering, sorting, and field selection
-
-// ListLandmarksByCountry - Enhanced with filtering, sorting, and field selection
+// ListLandmarksByCountry godoc
+// @Summary List landmarks by country
+// @Description Get a list of landmarks for a specific country
+// @Tags landmarks
+// @Accept json
+// @Produce json
+// @Param country path string true "Country name"
+// @Param limit query int false "Number of items to return"
+// @Param offset query int false "Number of items to skip"
+// @Param sort query string false "Sort field and order (e.g., '-name' for descending)"
+// @Param fields query string false "Comma-separated list of fields to include"
+// @Success 200 {object} map[string]interface{}
+// @Failure 403 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/landmarks/country/{country} [get]
 func (h *LandmarkHandler) ListLandmarksByCountry(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
@@ -184,6 +221,21 @@ func (h *LandmarkHandler) ListLandmarksByCountry(w http.ResponseWriter, r *http.
 	respondWithJSON(w, http.StatusOK, response)
 }
 
+// ListLandmarkByCategory godoc
+// @Summary List landmarks by category
+// @Description Get a list of landmarks for a specific category
+// @Tags landmarks
+// @Accept json
+// @Produce json
+// @Param category path string true "Category name"
+// @Param limit query int false "Number of items to return"
+// @Param offset query int false "Number of items to skip"
+// @Param sort query string false "Sort field and order (e.g., '-name' for descending)"
+// @Param fields query string false "Comma-separated list of fields to include"
+// @Success 200 {object} map[string]interface{}
+// @Failure 403 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/landmarks/category/{category} [get]
 func (h *LandmarkHandler) ListLandmarkByCategory(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
@@ -278,7 +330,18 @@ func haversine(lat1, lon1, lat2, lon2 float64) float64 {
 	return R * c
 }
 
-// SearchLandmarks - Searches landmarks within a given radius
+// SearchLandmarks godoc
+// @Summary Search landmarks by proximity
+// @Description Search for landmarks within a given radius of a point
+// @Tags landmarks
+// @Accept json
+// @Produce json
+// @Param request body SearchRequest true "Search parameters"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 403 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/landmarks/search [post]
 func (h *LandmarkHandler) SearchLandmarks(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	subscription, ok := services.SubscriptionFromContext(ctx)
@@ -317,6 +380,22 @@ func (h *LandmarkHandler) SearchLandmarks(w http.ResponseWriter, r *http.Request
 
 	respondWithJSON(w, http.StatusOK, response)
 }
+
+// ListLandmarksByName godoc
+// @Summary List landmarks by name
+// @Description Get a list of landmarks matching a given name (partial match)
+// @Tags landmarks
+// @Accept json
+// @Produce json
+// @Param name path string true "Landmark name (partial)"
+// @Param limit query int false "Number of items to return"
+// @Param offset query int false "Number of items to skip"
+// @Param sort query string false "Sort field and order (e.g., '-name' for descending)"
+// @Param fields query string false "Comma-separated list of fields to include"
+// @Success 200 {object} map[string]interface{}
+// @Failure 403 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/landmarks/name/{name} [get]
 func (h *LandmarkHandler) ListLandmarksByName(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
