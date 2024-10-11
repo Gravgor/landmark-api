@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"landmark-api/internal/services"
 	"net/http"
 )
@@ -50,6 +51,14 @@ type authResponse struct {
 
 type validateResponse struct {
 	Validate string `json:"validate"`
+}
+
+type checkResponse struct {
+	User struct {
+		Email  string `json:"email"`
+		APIKey string `json:"api_key"`
+	}
+	PlanType string `json:"plan_type"`
 }
 
 // Register godoc
@@ -126,6 +135,34 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 func (h *AuthHandler) ValidateToken(w http.ResponseWriter, r *http.Request) {
 	resp := validateResponse{Validate: "Token valid"}
+	json.NewEncoder(w).Encode(resp)
+}
+
+func (h *AuthHandler) CheckUser(w http.ResponseWriter, r *http.Request) {
+	user, ok := services.UserFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Error processing your request", http.StatusForbidden)
+		return // Add this line
+	}
+	subscription, ok := services.SubscriptionFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Error processing your request", http.StatusForbidden)
+		return // Add this line
+	}
+
+	userKeys, err := h.authService.GetAPIKey(r.Context(), user.ID)
+	if err != nil {
+		http.Error(w, "Can't fetch user api keys", http.StatusForbidden)
+		return
+	}
+	fmt.Print(userKeys)
+
+	resp := checkResponse{}
+	resp.User.APIKey = userKeys.Key
+	resp.User.Email = user.Email
+	resp.PlanType = string(subscription.PlanType)
+
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
 }
 

@@ -28,6 +28,7 @@ type AuthService interface {
 	Register(ctx context.Context, email, password string) (*models.User, error)
 	Login(ctx context.Context, email, password string) (string, error)
 	VerifyToken(token string) (*models.User, *models.Subscription, error)
+	GetAPIKey(ctx context.Context, userID uuid.UUID) (*models.APIKey, error)
 }
 
 type authService struct {
@@ -115,6 +116,15 @@ func (s *authService) Login(ctx context.Context, email, password string) (string
 	})
 
 	return token.SignedString([]byte(s.jwtSecret))
+}
+
+func (s *authService) GetAPIKey(ctx context.Context, userID uuid.UUID) (*models.APIKey, error) {
+	userKey, err := s.apiKeyService.GetAPIKeyByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return userKey, nil
+
 }
 
 func (s *authService) VerifyToken(tokenString string) (*models.User, *models.Subscription, error) {

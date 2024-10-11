@@ -6,3 +6,26 @@
 {"ip":"[::1]:51008","level":"info","method":"GET","msg":"Request handled","response_time":0,"status_code":404,"time":"2024-10-11T20:30:07+02:00","url":"/swagger"}
 {"level":"info","msg":"API started","port":"8080","time":"2024-10-11T21:07:57+02:00"}
 {"level":"info","msg":"API started","port":"8080","time":"2024-10-11T21:09:13+02:00"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-11T21:32:05+02:00"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-11T21:33:16+02:00"}
+{"ip":"127.0.0.1:53884","level":"info","method":"GET","msg":"Request handled","response_time":0,"status_code":200,"time":"2024-10-11T21:33:36+02:00","url":"/user/api/v1/validate-token"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-11T21:34:29+02:00"}
+{"ip":"127.0.0.1:53941","level":"info","method":"GET","msg":"Request handled","response_time":0,"status_code":403,"time":"2024-10-11T21:34:37+02:00","url":"/user/api/v1/me"}
+{"ip":"127.0.0.1:53956","level":"info","method":"POST","msg":"Request handled","response_time":923,"status_code":200,"time":"2024-10-11T21:35:35+02:00","url":"/auth/login"}
+{"ip":"127.0.0.1:53965","level":"info","method":"GET","msg":"Request handled","response_time":0,"status_code":403,"time":"2024-10-11T21:35:56+02:00","url":"/user/api/v1/me"}
+{"ip":"127.0.0.1:53967","level":"info","method":"GET","msg":"Request handled","response_time":0,"status_code":403,"time":"2024-10-11T21:35:57+02:00","url":"/user/api/v1/me"}
+{"ip":"127.0.0.1:54012","level":"info","method":"GET","msg":"Request handled","response_time":0,"status_code":403,"time":"2024-10-11T21:38:19+02:00","url":"/user/api/v1/me"}
+{"ip":"127.0.0.1:54013","level":"info","method":"GET","msg":"Request handled","response_time":0,"status_code":403,"time":"2024-10-11T21:38:28+02:00","url":"/user/api/v1/me"}
+{"ip":"127.0.0.1:54099","level":"info","method":"GET","msg":"Request handled","response_time":2711,"status_code":403,"time":"2024-10-11T21:40:52+02:00","url":"/api/v1/landmarks/category/Historical Site"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-11T21:41:43+02:00"}
+{"ip":"127.0.0.1:54137","level":"info","method":"GET","msg":"Request handled","response_time":1323,"status_code":200,"time":"2024-10-11T21:41:56+02:00","url":"/user/api/v1/me"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-11T21:53:56+02:00"}
+{"ip":"127.0.0.1:54497","level":"info","method":"GET","msg":"Request handled","response_time":1354,"status_code":200,"time":"2024-10-11T21:54:02+02:00","url":"/user/api/v1/me"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-11T21:54:35+02:00"}
+{"ip":"127.0.0.1:54528","level":"info","method":"GET","msg":"Request handled","response_time":1049,"status_code":200,"time":"2024-10-11T21:54:40+02:00","url":"/user/api/v1/me"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-11T21:55:47+02:00"}
+{"ip":"127.0.0.1:54571","level":"info","method":"GET","msg":"Request handled","response_time":1022,"status_code":200,"time":"2024-10-11T21:55:51+02:00","url":"/user/api/v1/me"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-11T21:57:40+02:00"}
+{"ip":"127.0.0.1:54767","level":"info","method":"GET","msg":"Request handled","response_time":1045,"status_code":200,"time":"2024-10-11T21:57:49+02:00","url":"/user/api/v1/me"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-11T22:06:55+02:00"}
+{"ip":"127.0.0.1:55015","level":"info","method":"GET","msg":"Request handled","response_time":1208,"status_code":200,"time":"2024-10-11T22:07:01+02:00","url":"/user/api/v1/me"}

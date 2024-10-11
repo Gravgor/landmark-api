@@ -119,7 +119,9 @@ func main() {
 
 	// User check routes
 	userRouter := router.PathPrefix("/user/api/v1").Subrouter()
+	userRouter.Use(middleware.AuthMiddleware(authService))
 	userRouter.HandleFunc("/validate-token", authHandler.ValidateToken).Methods("GET")
+	userRouter.HandleFunc("/me", authHandler.CheckUser).Methods("GET")
 
 	corsMiddleware := cors.New(cors.Options{
 		AllowedOrigins: []string{"http://localhost:3000"},
