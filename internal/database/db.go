@@ -2,7 +2,6 @@ package database
 
 import (
 	"fmt"
-	"landmark-api/internal/migrations"
 	"landmark-api/internal/models"
 	"log"
 	"os"
@@ -41,10 +40,10 @@ func InitDB() (*gorm.DB, error) {
 	if err := autoMigrate(db); err != nil {
 		return nil, fmt.Errorf("error migrating database: %v", err)
 	}
-	migrations.MigrateLandmarks(db)
+	//migrations.MigrateLandmarks(db)
 	return db, nil
 }
 
 func autoMigrate(db *gorm.DB) error {
-	return db.AutoMigrate(&models.RequestLog{})
+	return db.AutoMigrate(&models.User{})
 }

@@ -12,6 +12,7 @@ type User struct {
 	Name         string         `gorm:"type:varchar(255);not null" json:"name"`
 	Email        string         `gorm:"type:varchar(255);uniqueIndex;not null" json:"email"`
 	PasswordHash string         `gorm:"type:varchar(255);not null" json:"-"`
+	Role         string         `gorm:"type:varchar(255);not null;default:'user'" json:"role"`
 	APIKeys      []APIKey       `gorm:"foreignkey:UserID" json:"api_keys,omitempty"` // Add this line
 	CreatedAt    time.Time      `gorm:"not null;default:CURRENT_TIMESTAMP" json:"created_at"`
 	UpdatedAt    time.Time      `gorm:"not null;default:CURRENT_TIMESTAMP" json:"updated_at"`
