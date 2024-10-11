@@ -55,11 +55,13 @@ type validateResponse struct {
 }
 
 type checkResponse struct {
-	User struct {
-		Email  string `json:"email"`
-		APIKey string `json:"api_key"`
-	}
-	PlanType string `json:"plan_type"`
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	APIKey    string `json:"api_key"`
+	PlanType  string `json:"plan_type"`
+	ApiCalls  uint   `json:"api_calls"`
+	ApiLimit  uint   `json:"api_limit"`
+	Landmarks uint   `json:"landmarks"`
 }
 
 // Register godoc
@@ -159,9 +161,12 @@ func (h *AuthHandler) CheckUser(w http.ResponseWriter, r *http.Request) {
 	fmt.Print(userKeys)
 
 	resp := checkResponse{}
-	resp.User.APIKey = userKeys.Key
-	resp.User.Email = user.Email
+	resp.APIKey = userKeys.Key
+	resp.Email = user.Email
 	resp.PlanType = string(subscription.PlanType)
+	resp.ApiCalls = 1000
+	resp.ApiLimit = 10000
+	resp.Landmarks = 250
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
