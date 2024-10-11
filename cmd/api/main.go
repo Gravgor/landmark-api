@@ -117,6 +117,10 @@ func main() {
 	apiRouter.HandleFunc("/landmarks/category/{category}", landmarkHandler.ListLandmarkByCategory).Methods("GET")
 	apiRouter.HandleFunc("/landmarks/search", landmarkHandler.SearchLandmarks).Methods("POST")
 
+	// User check routes
+	userRouter := router.PathPrefix("/user/api/v1").Subrouter()
+	userRouter.HandleFunc("/validate-token", authHandler.ValidateToken).Methods("GET")
+
 	corsMiddleware := cors.New(cors.Options{
 		AllowedOrigins: []string{"http://localhost:3000"},
 		AllowedMethods: []string{

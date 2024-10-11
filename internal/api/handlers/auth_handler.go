@@ -28,6 +28,14 @@ type registrationRequest struct {
 	Password string `json:"password"`
 }
 
+type registrationResponse struct {
+	User struct {
+		ID    string `json:"id"`
+		Email string `json:"email"`
+	}
+	Error string `json:"error,omitempty"`
+}
+
 // loginRequest represents the structure of a login request
 type loginRequest struct {
 	Email    string `json:"email"`
@@ -37,11 +45,11 @@ type loginRequest struct {
 // authResponse represents the structure of an authentication response
 type authResponse struct {
 	Token string `json:"token,omitempty"`
-	User  struct {
-		ID    string `json:"id"`
-		Email string `json:"email"`
-	} `json:"user,omitempty"`
 	Error string `json:"error,omitempty"`
+}
+
+type validateResponse struct {
+	Validate string `json:"validate"`
 }
 
 // Register godoc
@@ -73,7 +81,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := authResponse{}
+	resp := registrationResponse{}
 	resp.User.ID = user.ID.String()
 	resp.User.Email = user.Email
 
@@ -113,6 +121,11 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	resp := authResponse{Token: token}
 
 	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
+func (h *AuthHandler) ValidateToken(w http.ResponseWriter, r *http.Request) {
+	resp := validateResponse{Validate: "Token valid"}
 	json.NewEncoder(w).Encode(resp)
 }
 
