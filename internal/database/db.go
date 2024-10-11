@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"landmark-api/internal/models"
 	"log"
 	"os"
 	"time"
@@ -45,5 +46,5 @@ func InitDB() (*gorm.DB, error) {
 }
 
 func autoMigrate(db *gorm.DB) error {
-	return db.AutoMigrate()
+	return db.AutoMigrate(&models.User{}, &models.Landmark{}, &models.LandmarkDetail{}, &models.Subscription{}, &models.APIKey{})
 }
