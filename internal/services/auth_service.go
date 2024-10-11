@@ -29,6 +29,7 @@ type AuthService interface {
 	Login(ctx context.Context, email, password string) (string, error)
 	VerifyToken(token string) (*models.User, *models.Subscription, error)
 	GetAPIKey(ctx context.Context, userID uuid.UUID) (*models.APIKey, error)
+	GetCurrentSubscription(ctx context.Context, userID uuid.UUID) (*models.Subscription, error)
 }
 
 type authService struct {
@@ -125,7 +126,14 @@ func (s *authService) GetAPIKey(ctx context.Context, userID uuid.UUID) (*models.
 		return nil, err
 	}
 	return userKey, nil
+}
 
+func (s *authService) GetCurrentSubscription(ctx context.Context, userID uuid.UUID) (*models.Subscription, error) {
+	subscription, err := s.subscriptionRepo.GetActiveByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return subscription, nil
 }
 
 func (s *authService) VerifyToken(tokenString string) (*models.User, *models.Subscription, error) {

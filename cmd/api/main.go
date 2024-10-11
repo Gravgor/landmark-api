@@ -58,7 +58,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to get underlying *sql.DB instance:", err)
 	}
-
+	rateLimitConfig := config.NewRateLimitConfig()
 	cacheConfig := config.NewCacheConfig()
 	cacheService, err := services.NewRedisCacheService(cacheConfig)
 	if err != nil {
@@ -73,6 +73,7 @@ func main() {
 	subscriptionRepo := repository.NewSubscriptionRepository(db)
 	landmarkRepo := repository.NewLandmarkRepository(db)
 	apiKeyRepo := repository.NewAPIKeyRepository(db)
+	apiUsageRepo := repository.NewAPIUsageRepository(db)
 
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
@@ -92,7 +93,9 @@ func main() {
 	authHandler := handlers.NewAuthHandler(authService)
 	landmarkHandler := handlers.NewLandmarkHandler(landmarkService, cacheService, db)
 
-	rateLimiter := middleware.NewRateLimiter()
+	rateLimiter := middleware.NewRateLimiter(rateLimitConfig)
+	apiUsageService := services.NewAPIUsageService(apiUsageRepo, rateLimitConfig)
+	apiUsageHandler := handlers.NewUsageHandler(apiUsageService, authService)
 
 	router := mux.NewRouter()
 	router.Use(middleware.LoggingMiddleware)
@@ -107,7 +110,7 @@ func main() {
 	apiRouter := router.PathPrefix("/api/v1").Subrouter()
 	apiRouter.Use(middleware.AuthMiddleware(authService))
 	apiRouter.Use(middleware.APIKeyMiddleware(apiKeyService))
-	apiRouter.Use(rateLimiter.RateLimit)
+	apiRouter.Use(rateLimiter.RateLimit(authService, apiUsageService))
 
 	// Landmarks routes
 	apiRouter.HandleFunc("/landmarks", landmarkHandler.ListLandmarks).Methods("GET")
@@ -122,6 +125,7 @@ func main() {
 	userRouter.Use(middleware.AuthMiddleware(authService))
 	userRouter.HandleFunc("/validate-token", authHandler.ValidateToken).Methods("GET")
 	userRouter.HandleFunc("/me", authHandler.CheckUser).Methods("GET")
+	userRouter.HandleFunc("/usage", apiUsageHandler.GetCurrentUsage).Methods("GET")
 
 	corsMiddleware := cors.New(cors.Options{
 		AllowedOrigins: []string{"http://localhost:3000"},
