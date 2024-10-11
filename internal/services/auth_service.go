@@ -25,7 +25,7 @@ var (
 )
 
 type AuthService interface {
-	Register(ctx context.Context, email, password string) (*models.User, error)
+	Register(ctx context.Context, email, password, name string) (*models.User, error)
 	Login(ctx context.Context, email, password string) (string, error)
 	VerifyToken(token string) (*models.User, *models.Subscription, error)
 	GetAPIKey(ctx context.Context, userID uuid.UUID) (*models.APIKey, error)
@@ -52,7 +52,7 @@ func NewAuthService(
 	}
 }
 
-func (s *authService) Register(ctx context.Context, email, password string) (*models.User, error) {
+func (s *authService) Register(ctx context.Context, email, password, name string) (*models.User, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
@@ -60,6 +60,7 @@ func (s *authService) Register(ctx context.Context, email, password string) (*mo
 
 	user := &models.User{
 		ID:           uuid.New(),
+		Name:         name,
 		Email:        email,
 		PasswordHash: string(hashedPassword),
 		CreatedAt:    time.Now(),

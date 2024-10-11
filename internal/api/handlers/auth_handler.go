@@ -25,6 +25,7 @@ func NewAuthHandler(authService services.AuthService) *AuthHandler {
 
 // registrationRequest represents the structure of a registration request
 type registrationRequest struct {
+	Name     string `json:"name"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
@@ -84,7 +85,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.authService.Register(r.Context(), req.Email, req.Password)
+	user, err := h.authService.Register(r.Context(), req.Email, req.Name, req.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

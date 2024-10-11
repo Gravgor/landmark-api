@@ -46,5 +46,5 @@ func InitDB() (*gorm.DB, error) {
 }
 
 func autoMigrate(db *gorm.DB) error {
-	return db.AutoMigrate(&models.User{}, &models.Landmark{}, &models.LandmarkDetail{}, &models.Subscription{}, &models.APIKey{})
+	return db.AutoMigrate(&models.User{})
 }
