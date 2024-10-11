@@ -97,6 +97,11 @@ func main() {
 	apiUsageService := services.NewAPIUsageService(apiUsageRepo, rateLimitConfig)
 	apiUsageHandler := handlers.NewUsageHandler(apiUsageService, authService)
 
+	requestLogRepo := repository.NewRequestLogRepository(db)
+	requestLogService := services.NewRequestLogService(requestLogRepo)
+	requestLogHandler := handlers.NewRequestLogHandler(requestLogService)
+	requestLogger := middleware.NewRequestLogger(requestLogService)
+
 	router := mux.NewRouter()
 	router.Use(middleware.LoggingMiddleware)
 
@@ -111,6 +116,7 @@ func main() {
 	apiRouter.Use(middleware.AuthMiddleware(authService))
 	apiRouter.Use(middleware.APIKeyMiddleware(apiKeyService))
 	apiRouter.Use(rateLimiter.RateLimit(authService, apiUsageService))
+	apiRouter.Use(requestLogger.LogRequest)
 
 	// Landmarks routes
 	apiRouter.HandleFunc("/landmarks", landmarkHandler.ListLandmarks).Methods("GET")
@@ -126,6 +132,7 @@ func main() {
 	userRouter.HandleFunc("/validate-token", authHandler.ValidateToken).Methods("GET")
 	userRouter.HandleFunc("/me", authHandler.CheckUser).Methods("GET")
 	userRouter.HandleFunc("/usage", apiUsageHandler.GetCurrentUsage).Methods("GET")
+	userRouter.HandleFunc("/requests/logs", requestLogHandler.GetUserLogs).Methods("GET")
 
 	corsMiddleware := cors.New(cors.Options{
 		AllowedOrigins: []string{"http://localhost:3000"},
