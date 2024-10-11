@@ -55,13 +55,14 @@ type validateResponse struct {
 }
 
 type checkResponse struct {
-	Name      string `json:"name"`
-	Email     string `json:"email"`
-	APIKey    string `json:"api_key"`
-	PlanType  string `json:"plan_type"`
-	ApiCalls  uint   `json:"api_calls"`
-	ApiLimit  uint   `json:"api_limit"`
-	Landmarks uint   `json:"landmarks"`
+	Name        string `json:"name"`
+	Email       string `json:"email"`
+	APIKey      string `json:"apiKey"`
+	PlanType    string `json:"planType"`
+	ApiCalls    uint   `json:"apiCalls"`
+	ApiLimit    uint   `json:"apiLimit"`
+	Landmarks   uint   `json:"landmarks"`
+	AccessToken string `json:"accessToken"`
 }
 
 // Register godoc
@@ -167,6 +168,7 @@ func (h *AuthHandler) CheckUser(w http.ResponseWriter, r *http.Request) {
 	resp.ApiCalls = 1000
 	resp.ApiLimit = 10000
 	resp.Landmarks = 250
+	resp.AccessToken = ""
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
