@@ -162,6 +162,7 @@ func (h *AuthHandler) CheckUser(w http.ResponseWriter, r *http.Request) {
 	fmt.Print(userKeys)
 
 	resp := checkResponse{}
+	resp.Name = user.Name
 	resp.APIKey = userKeys.Key
 	resp.Email = user.Email
 	resp.PlanType = string(subscription.PlanType)
