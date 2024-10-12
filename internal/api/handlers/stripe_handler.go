@@ -21,16 +21,18 @@ import (
 )
 
 type StripeHandler struct {
-	authService services.AuthService
-	subRepo     repository.SubscriptionRepository
-	userRepo    repository.UserRepository
+	authService   services.AuthService
+	subRepo       repository.SubscriptionRepository
+	userRepo      repository.UserRepository
+	apiKeyService services.APIKeyService
 }
 
-func NewStripeHandler(auth services.AuthService, subRepo repository.SubscriptionRepository, userRepo repository.UserRepository) *StripeHandler {
+func NewStripeHandler(auth services.AuthService, subRepo repository.SubscriptionRepository, userRepo repository.UserRepository, apiKeyService services.APIKeyService) *StripeHandler {
 	return &StripeHandler{
-		authService: auth,
-		subRepo:     subRepo,
-		userRepo:    userRepo,
+		authService:   auth,
+		subRepo:       subRepo,
+		userRepo:      userRepo,
+		apiKeyService: apiKeyService,
 	}
 }
 
@@ -183,6 +185,11 @@ func (h *StripeHandler) handleCheckoutSessionCompleted(ctx context.Context, sess
 		log.Printf("Error creating/updating subscription for user %d: %v", user.ID, err)
 		return
 	}
+	_, err = h.apiKeyService.AssignAPIKeyToUser(ctx, user.ID)
+	if err != nil {
+		log.Printf("Error creating api key for user %d: %v", user.ID)
+		return
+	}
 	err = h.userRepo.GrantAccess(ctx, user.ID)
 	if err != nil {
 		log.Printf("Error granting service access to user %d: %v", user.ID, err)
@@ -199,7 +206,6 @@ func (h *StripeHandler) handleSubscriptionUpdated(ctx context.Context, subscript
 		return
 	}
 
-	// 2. Update the subscription record in your database
 	updatedSubscription := &models.Subscription{
 		UserID:           user.ID,
 		StripeCustomerID: subscription.Customer.ID,
@@ -215,7 +221,6 @@ func (h *StripeHandler) handleSubscriptionUpdated(ctx context.Context, subscript
 		return
 	}
 
-	// 3. Adjust the user's access based on the new subscription status
 	if subscription.Status == stripe.SubscriptionStatusActive {
 		err = h.userRepo.GrantAccess(ctx, user.ID)
 		if err != nil {
