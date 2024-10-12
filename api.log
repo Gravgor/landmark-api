@@ -56,3 +56,7 @@
 {"level":"info","msg":"API started","port":"8080","time":"2024-10-12T17:17:53+02:00"}
 {"level":"info","msg":"API started","port":"8080","time":"2024-10-12T17:18:50+02:00"}
 {"ip":"127.0.0.1:59034","level":"info","method":"POST","msg":"Request handled","response_time":1376,"status_code":500,"time":"2024-10-12T17:19:25+02:00","url":"/subscription/create-user-account"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-12T19:53:50+02:00"}
+{"ip":"127.0.0.1:49753","level":"info","method":"GET","msg":"Request handled","response_time":878,"status_code":403,"time":"2024-10-12T19:54:04+02:00","url":"/subscription/manage/get-billing"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-12T19:54:32+02:00"}
+{"ip":"127.0.0.1:49780","level":"info","method":"GET","msg":"Request handled","response_time":1059,"status_code":403,"time":"2024-10-12T19:54:37+02:00","url":"/subscription/manage/get-billing"}

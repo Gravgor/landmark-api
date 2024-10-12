@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -47,13 +48,6 @@ const (
 	ErrInvalidPlanType = "invalid plan type"
 	ErrCreateCheckout  = "error creating checkout session"
 	ErrNoPriceID       = "no price ID found for the selected plan"
-)
-
-type contextKey string
-
-const (
-	UserContextKey         contextKey = "user"
-	SubscriptionContextKey contextKey = "subscription"
 )
 
 func (h *StripeHandler) HandleCreateCheckOut(w http.ResponseWriter, r *http.Request) {
@@ -182,8 +176,9 @@ type BillingInfo struct {
 }
 
 func (h *StripeHandler) HandleUserBillingInfo(w http.ResponseWriter, r *http.Request) {
-	user, ok := UserFromContext(r.Context())
-	if !ok {
+	tokenString := extractTokenFromHeader(r)
+	user, _, err := h.authService.VerifyToken(tokenString)
+	if err != nil {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
@@ -316,7 +311,10 @@ func (h *StripeHandler) handleSubscriptionUpdated(ctx context.Context, subscript
 	fmt.Printf("Subscription updated for customer: %s, status: %s\n", subscription.Customer.ID, subscription.Status)
 }
 
-func UserFromContext(ctx context.Context) (*models.User, bool) {
-	user, ok := ctx.Value(UserContextKey).(*models.User)
-	return user, ok
+func extractTokenFromHeader(r *http.Request) string {
+	bearerToken := r.Header.Get("Authorization")
+	if len(strings.Split(bearerToken, " ")) == 2 {
+		return strings.Split(bearerToken, " ")[1]
+	}
+	return ""
 }
