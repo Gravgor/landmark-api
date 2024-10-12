@@ -19,8 +19,8 @@ type Subscription struct {
 	ID               uuid.UUID        `gorm:"type:uuid;primaryKey" json:"id"`
 	UserID           uuid.UUID        `gorm:"type:uuid;not null;index" json:"user_id"`
 	PlanType         SubscriptionPlan `gorm:"type:varchar(20);not null" json:"plan_type"`
-	StripeCustomerID string           `gorm:"type:varchar(255);not null" json:"stripe_customer_id"`
-	StripePlanID     string           `gorm:"type:varchar(255);not null" json:"stripe_plan_id"`
+	StripeCustomerID string           `gorm:"type:varchar(255);not null;default:null" json:"stripe_customer_id"`
+	StripePlanID     string           `gorm:"type:varchar(255);not nulldefault:null" json:"stripe_plan_id"`
 	StartDate        time.Time        `gorm:"not null" json:"start_date"`
 	EndDate          time.Time        `gorm:"default:null" json:"end_date"`
 	Status           string           `gorm:"type:varchar(50);not null" json:"status"`
