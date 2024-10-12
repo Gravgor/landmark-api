@@ -82,7 +82,8 @@ func (h *FileUploadHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		Bucket:      aws.String("properties-photos"),
 		Key:         aws.String(header.Filename),
 		Body:        bytes.NewReader(buffer),
-		ContentType: aws.String(header.Header.Get("Content-Type")), // Set content type
+		ACL:         aws.String("public-read"),
+		ContentType: aws.String(header.Header.Get("Content-Type")),
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
