@@ -144,6 +144,10 @@ func main() {
 	subscriptionRouter.HandleFunc("/create-user-account", authHandler.RegisterSub).Methods("POST")
 	subscriptionRouter.HandleFunc("/stripe-webhook", stripeHandler.HandleStripeWebhook).Methods("POST")
 
+	subscriptionRouterManage := router.PathPrefix("/subscription/manage").Subrouter()
+	subscriptionRouterManage.Use(middleware.AuthMiddleware(authService))
+	subscriptionRouterManage.HandleFunc("/get-billing", stripeHandler.HandleUserBillingInfo).Methods("GET")
+
 	tokenRepo := repository.NewAdminTokenRepository(db)
 	tokenService := services.NewAdminTokenService(tokenRepo)
 	go func() {

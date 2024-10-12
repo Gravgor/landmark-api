@@ -17,6 +17,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/checkout/session"
+	"github.com/stripe/stripe-go/v72/invoice"
+	"github.com/stripe/stripe-go/v72/sub"
 	"github.com/stripe/stripe-go/v72/webhook"
 )
 
@@ -45,6 +47,13 @@ const (
 	ErrInvalidPlanType = "invalid plan type"
 	ErrCreateCheckout  = "error creating checkout session"
 	ErrNoPriceID       = "no price ID found for the selected plan"
+)
+
+type contextKey string
+
+const (
+	UserContextKey         contextKey = "user"
+	SubscriptionContextKey contextKey = "subscription"
 )
 
 func (h *StripeHandler) HandleCreateCheckOut(w http.ResponseWriter, r *http.Request) {
@@ -166,6 +175,74 @@ func (h *StripeHandler) HandleStripeWebhook(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusOK)
 }
 
+type BillingInfo struct {
+	Invoices        []stripe.Invoice     `json:"invoices"`
+	Subscription    *stripe.Subscription `json:"subscription,omitempty"`
+	NextPaymentDate int64                `json:"next_payment_date,omitempty"`
+}
+
+func (h *StripeHandler) HandleUserBillingInfo(w http.ResponseWriter, r *http.Request) {
+	user, ok := UserFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	fullUser, err := h.authService.GetUserByID(r.Context(), user.ID)
+	if err != nil {
+		http.Error(w, "Failed to retrieve user", http.StatusBadRequest)
+		return
+	}
+
+	if fullUser.StripeID == "" {
+		http.Error(w, "User does not have a valid Stripe ID", http.StatusBadRequest)
+		return
+	}
+
+	params := &stripe.InvoiceListParams{
+		Customer: &fullUser.StripeID,
+	}
+	invoices := make([]stripe.Invoice, 0)
+	i := invoice.List(params)
+	for i.Next() {
+		invoices = append(invoices, *i.Invoice())
+	}
+	if err := i.Err(); err != nil {
+		http.Error(w, "Failed to fetch invoices", http.StatusInternalServerError)
+		return
+	}
+
+	subParams := &stripe.SubscriptionListParams{
+		Customer: fullUser.StripeID,
+	}
+	subs := sub.List(subParams)
+	var subscription *stripe.Subscription
+	if subs.Next() {
+		subscription = subs.Subscription()
+	}
+	if err := subs.Err(); err != nil {
+		http.Error(w, "Failed to fetch subscription", http.StatusInternalServerError)
+		return
+	}
+
+	var nextPaymentDate int64
+	if subscription != nil {
+		nextPaymentDate = subscription.CurrentPeriodEnd
+	}
+
+	billingInfo := BillingInfo{
+		Invoices:        invoices,
+		Subscription:    subscription,
+		NextPaymentDate: nextPaymentDate,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(billingInfo); err != nil {
+		http.Error(w, "Failed to encode billing info", http.StatusInternalServerError)
+		return
+	}
+}
+
 func (h *StripeHandler) handleCheckoutSessionCompleted(ctx context.Context, session stripe.CheckoutSession) {
 	user, err := h.authService.GetUserByStripeCustomerID(ctx, session.Customer.ID)
 	if err != nil {
@@ -237,4 +314,9 @@ func (h *StripeHandler) handleSubscriptionUpdated(ctx context.Context, subscript
 	}
 
 	fmt.Printf("Subscription updated for customer: %s, status: %s\n", subscription.Customer.ID, subscription.Status)
+}
+
+func UserFromContext(ctx context.Context) (*models.User, bool) {
+	user, ok := ctx.Value(UserContextKey).(*models.User)
+	return user, ok
 }
