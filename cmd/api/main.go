@@ -19,8 +19,6 @@
 package main
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"landmark-api/internal/api/controllers"
 	"landmark-api/internal/api/handlers"
 	"landmark-api/internal/config"
@@ -158,6 +156,17 @@ func main() {
 	adminRouter.HandleFunc("/landmarks/upload-photo", fileUploadHandler.Upload).Methods("POST")
 	adminRouter.HandleFunc("/landmarks/create", landmarkHandler.CreateLandmark).Methods("POST")
 
+	go func() {
+		for {
+			time.Sleep(4 * time.Hour)
+			if err := requestLogRepo.DeleteOldLogs(); err != nil {
+				log.Printf("Error deleting old logs: %v", err)
+			} else {
+				log.Println("Old logs deleted successfully")
+			}
+		}
+	}()
+
 	corsMiddleware := cors.New(cors.Options{
 		AllowedOrigins: []string{"http://localhost:3000"},
 		AllowedMethods: []string{
@@ -203,12 +212,4 @@ func getPort() string {
 		port = "5050"
 	}
 	return port
-}
-
-func generateSecureToken(length int) string {
-	b := make([]byte, length)
-	if _, err := rand.Read(b); err != nil {
-		return ""
-	}
-	return hex.EncodeToString(b)
 }

@@ -450,6 +450,7 @@ func (h *LandmarkHandler) CreateLandmark(w http.ResponseWriter, r *http.Request)
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&landmarkData); err != nil {
+		log.Printf("Error decoding JSON: %v", err)
 		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}

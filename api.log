@@ -29,3 +29,16 @@
 {"ip":"127.0.0.1:54767","level":"info","method":"GET","msg":"Request handled","response_time":1045,"status_code":200,"time":"2024-10-11T21:57:49+02:00","url":"/user/api/v1/me"}
 {"level":"info","msg":"API started","port":"8080","time":"2024-10-11T22:06:55+02:00"}
 {"ip":"127.0.0.1:55015","level":"info","method":"GET","msg":"Request handled","response_time":1208,"status_code":200,"time":"2024-10-11T22:07:01+02:00","url":"/user/api/v1/me"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-12T03:19:15+02:00"}
+{"ip":"127.0.0.1:52214","level":"info","method":"POST","msg":"Request handled","response_time":516,"status_code":401,"time":"2024-10-12T03:20:23+02:00","url":"/ebab6093f3077468bf977cadf316841c88e03a5ffbe05812ca6d1ae64d2d040b/api/v1/landmarks/create"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-12T03:22:34+02:00"}
+{"ip":"127.0.0.1:52345","level":"info","method":"POST","msg":"Request handled","response_time":895,"status_code":400,"time":"2024-10-12T03:22:58+02:00","url":"/6f27ee581a4c29a546c5a611325161176bed6cf9d853782c47489d0659c558a1/api/v1/landmarks/create"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-12T03:23:22+02:00"}
+{"ip":"127.0.0.1:52371","level":"info","method":"POST","msg":"Request handled","response_time":890,"status_code":400,"time":"2024-10-12T03:23:29+02:00","url":"/6f27ee581a4c29a546c5a611325161176bed6cf9d853782c47489d0659c558a1/api/v1/landmarks/create"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-12T03:25:10+02:00"}
+{"ip":"127.0.0.1:52461","level":"info","method":"POST","msg":"Request handled","response_time":885,"status_code":400,"time":"2024-10-12T03:25:22+02:00","url":"/6f27ee581a4c29a546c5a611325161176bed6cf9d853782c47489d0659c558a1/api/v1/landmarks/create"}
+{"ip":"127.0.0.1:52502","level":"info","method":"POST","msg":"Request handled","response_time":519,"status_code":400,"time":"2024-10-12T03:26:12+02:00","url":"/6f27ee581a4c29a546c5a611325161176bed6cf9d853782c47489d0659c558a1/api/v1/landmarks/create"}
+{"ip":"127.0.0.1:52547","level":"info","method":"POST","msg":"Request handled","response_time":514,"status_code":400,"time":"2024-10-12T03:27:08+02:00","url":"/6f27ee581a4c29a546c5a611325161176bed6cf9d853782c47489d0659c558a1/api/v1/landmarks/create"}
+{"ip":"127.0.0.1:52559","level":"info","method":"POST","msg":"Request handled","response_time":1700,"status_code":201,"time":"2024-10-12T03:27:23+02:00","url":"/6f27ee581a4c29a546c5a611325161176bed6cf9d853782c47489d0659c558a1/api/v1/landmarks/create"}
+{"ip":"127.0.0.1:52605","level":"info","method":"GET","msg":"Request handled","response_time":3873,"status_code":200,"time":"2024-10-12T03:28:56+02:00","url":"/api/v1/landmarks/name/Statue"}
+{"ip":"127.0.0.1:52615","level":"info","method":"GET","msg":"Request handled","response_time":2609,"status_code":200,"time":"2024-10-12T03:29:20+02:00","url":"/api/v1/landmarks/name/Statue"}

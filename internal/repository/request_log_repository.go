@@ -11,6 +11,7 @@ type RequestLogRepository interface {
 	Create(log *models.RequestLog) error
 	GetUserLogs(userID string, from, to time.Time) ([]models.RequestLog, error)
 	GetEndpointLogs(endpoint string, from, to time.Time) ([]models.RequestLog, error)
+	DeleteOldLogs() error
 }
 
 type requestLogRepository struct {
@@ -39,4 +40,10 @@ func (r *requestLogRepository) GetEndpointLogs(endpoint string, from, to time.Ti
 		Order("timestamp desc").
 		Find(&logs).Error
 	return logs, err
+}
+
+func (r *requestLogRepository) DeleteOldLogs() error {
+	// Calculate the timestamp for 12 hours ago
+	twelveHoursAgo := time.Now().Add(-12 * time.Hour)
+	return r.db.Where("timestamp < ?", twelveHoursAgo).Delete(&models.RequestLog{}).Error
 }
