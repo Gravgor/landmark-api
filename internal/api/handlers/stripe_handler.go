@@ -187,7 +187,7 @@ func (h *StripeHandler) handleCheckoutSessionCompleted(ctx context.Context, sess
 	}
 	_, err = h.apiKeyService.AssignAPIKeyToUser(ctx, user.ID)
 	if err != nil {
-		log.Printf("Error creating api key for user %d: %v", user.ID)
+		log.Printf("Error creating api key for user %d: %v", user.ID, err)
 		return
 	}
 	err = h.userRepo.GrantAccess(ctx, user.ID)

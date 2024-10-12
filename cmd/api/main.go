@@ -105,7 +105,7 @@ func main() {
 	requestLogger := middleware.NewRequestLogger(requestLogService)
 
 	fileUploadHandler := handlers.NewFileUploadHandler()
-	stripeHandler := handlers.NewStripeHandler(authService, subscriptionRepo, userRepo)
+	stripeHandler := handlers.NewStripeHandler(authService, subscriptionRepo, userRepo, apiKeyService)
 
 	router := mux.NewRouter()
 	router.Use(middleware.LoggingMiddleware)
