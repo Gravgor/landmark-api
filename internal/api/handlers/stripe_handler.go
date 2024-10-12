@@ -108,8 +108,8 @@ func (h *StripeHandler) createStripeCheckoutSession(customerID, priceID string) 
 			},
 		},
 		Mode:       stripe.String(string(stripe.CheckoutSessionModeSubscription)),
-		SuccessURL: stripe.String("http://localhost:3000/success"),
-		CancelURL:  stripe.String("http://localhost:3000/cancel"),
+		SuccessURL: stripe.String("https://landmark-api-frontend-v2-production.up.railway.app/success"),
+		CancelURL:  stripe.String("https://landmark-api-frontend-v2-production.up.railway.app/cancel"),
 	}
 
 	s, err := session.New(params)
