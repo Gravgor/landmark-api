@@ -45,3 +45,14 @@
 {"level":"info","msg":"API started","port":"8080","time":"2024-10-12T17:00:26+02:00"}
 {"level":"info","msg":"API started","port":"8080","time":"2024-10-12T17:01:13+02:00"}
 {"ip":"127.0.0.1:58067","level":"info","method":"POST","msg":"Request handled","response_time":1361,"status_code":500,"time":"2024-10-12T17:01:22+02:00","url":"/subscription/create-user-account"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-12T17:05:23+02:00"}
+{"ip":"127.0.0.1:58272","level":"info","method":"POST","msg":"Request handled","response_time":1375,"status_code":500,"time":"2024-10-12T17:05:35+02:00","url":"/subscription/create-user-account"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-12T17:07:59+02:00"}
+{"ip":"127.0.0.1:58439","level":"info","method":"POST","msg":"Request handled","response_time":1721,"status_code":500,"time":"2024-10-12T17:08:08+02:00","url":"/subscription/create-user-account"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-12T17:09:44+02:00"}
+{"ip":"127.0.0.1:58537","level":"info","method":"POST","msg":"Request handled","response_time":2001,"status_code":500,"time":"2024-10-12T17:10:03+02:00","url":"/subscription/create-user-account"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-12T17:12:41+02:00"}
+{"ip":"127.0.0.1:58665","level":"info","method":"POST","msg":"Request handled","response_time":1744,"status_code":500,"time":"2024-10-12T17:12:52+02:00","url":"/subscription/create-user-account"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-12T17:17:53+02:00"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-12T17:18:50+02:00"}
+{"ip":"127.0.0.1:59034","level":"info","method":"POST","msg":"Request handled","response_time":1376,"status_code":500,"time":"2024-10-12T17:19:25+02:00","url":"/subscription/create-user-account"}

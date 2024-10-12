@@ -119,6 +119,7 @@ func (s *authService) RegisterSub(ctx context.Context, email, password, name str
 		Email:        email,
 		PasswordHash: string(hashedPassword),
 		StripeID:     c.ID,
+		HasAccess:    false,
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
 	}

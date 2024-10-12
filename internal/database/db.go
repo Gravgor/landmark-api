@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"landmark-api/internal/models"
 	"log"
 	"os"
 	"time"
@@ -44,5 +45,9 @@ func InitDB() (*gorm.DB, error) {
 }
 
 func autoMigrate(db *gorm.DB) error {
-	return db.AutoMigrate()
+	/*err := db.Migrator().DropTable(&models.User{}, &models.APIKey{}, &models.Subscription{})
+	if err != nil {
+		log.Fatal("Failed to drop tables: ", err)
+	}*/
+	return db.AutoMigrate(&models.User{}, &models.APIKey{}, &models.Subscription{})
 }
