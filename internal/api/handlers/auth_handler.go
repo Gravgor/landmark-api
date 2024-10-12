@@ -115,7 +115,7 @@ func (h *AuthHandler) RegisterSub(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.authService.RegisterSub(r.Context(), req.Email, req.Password, req.Name, req.Plan)
+	user, err := h.authService.RegisterSub(r.Context(), req.Email, req.Password, req.Name)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
