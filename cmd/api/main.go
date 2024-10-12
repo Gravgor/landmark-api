@@ -19,6 +19,8 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"landmark-api/internal/api/controllers"
 	"landmark-api/internal/api/handlers"
 	"landmark-api/internal/config"
@@ -102,6 +104,8 @@ func main() {
 	requestLogHandler := handlers.NewRequestLogHandler(requestLogService)
 	requestLogger := middleware.NewRequestLogger(requestLogService)
 
+	fileUploadHandler := handlers.NewFileUploadHandler()
+
 	router := mux.NewRouter()
 	router.Use(middleware.LoggingMiddleware)
 
@@ -133,6 +137,26 @@ func main() {
 	userRouter.HandleFunc("/me", authHandler.CheckUser).Methods("GET")
 	userRouter.HandleFunc("/usage", apiUsageHandler.GetCurrentUsage).Methods("GET")
 	userRouter.HandleFunc("/requests/logs", requestLogHandler.GetUserLogs).Methods("GET")
+
+	tokenRepo := repository.NewAdminTokenRepository(db)
+	tokenService := services.NewAdminTokenService(tokenRepo)
+	go func() {
+		for {
+			time.Sleep(24 * time.Hour)
+			if _, err := tokenService.GetOrCreateAdminToken(); err != nil {
+				log.Printf("Error updating admin token: %v", err)
+			}
+		}
+	}()
+	adminPath, err := tokenService.GetOrCreateAdminToken()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	adminRouter := router.PathPrefix("/" + adminPath + "/api/v1").Subrouter()
+	adminRouter.Use(middleware.AdminMiddleware(authService))
+	adminRouter.HandleFunc("/landmarks/upload-photo", fileUploadHandler.Upload).Methods("POST")
+	adminRouter.HandleFunc("/landmarks/create", landmarkHandler.CreateLandmark).Methods("POST")
 
 	corsMiddleware := cors.New(cors.Options{
 		AllowedOrigins: []string{"http://localhost:3000"},
@@ -179,4 +203,12 @@ func getPort() string {
 		port = "5050"
 	}
 	return port
+}
+
+func generateSecureToken(length int) string {
+	b := make([]byte, length)
+	if _, err := rand.Read(b); err != nil {
+		return ""
+	}
+	return hex.EncodeToString(b)
 }

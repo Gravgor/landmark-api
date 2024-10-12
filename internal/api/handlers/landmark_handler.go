@@ -441,6 +441,55 @@ func (h *LandmarkHandler) ListLandmarksByName(w http.ResponseWriter, r *http.Req
 	respondWithJSON(w, http.StatusOK, response)
 }
 
+func (h *LandmarkHandler) CreateLandmark(w http.ResponseWriter, r *http.Request) {
+
+	// Parse the request body
+	var landmarkData struct {
+		Landmark       models.Landmark       `json:"landmark"`
+		LandmarkDetail models.LandmarkDetail `json:"landmark_detail"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&landmarkData); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	// Start a database transaction
+	tx := h.db.Begin()
+	if tx.Error != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to start database transaction")
+		return
+	}
+
+	// Create the Landmark
+	landmarkData.Landmark.ID = uuid.New() // Generate a new UUID for the landmark
+	if err := tx.Create(&landmarkData.Landmark).Error; err != nil {
+		tx.Rollback()
+		respondWithError(w, http.StatusInternalServerError, "Failed to create landmark")
+		return
+	}
+
+	// Create the LandmarkDetail
+	landmarkData.LandmarkDetail.ID = uuid.New() // Generate a new UUID for the landmark detail
+	landmarkData.LandmarkDetail.LandmarkID = landmarkData.Landmark.ID
+	if err := tx.Create(&landmarkData.LandmarkDetail).Error; err != nil {
+		tx.Rollback()
+		respondWithError(w, http.StatusInternalServerError, "Failed to create landmark details")
+		return
+	}
+
+	// Commit the transaction
+	if err := tx.Commit().Error; err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to commit transaction")
+		return
+	}
+
+	// Prepare the response
+	response := h.mergeLandmarkAndDetails(&landmarkData.Landmark, &landmarkData.LandmarkDetail)
+
+	respondWithJSON(w, http.StatusCreated, response)
+}
+
 // Helper functions
 
 func parseQueryParams(r *http.Request) QueryParams {

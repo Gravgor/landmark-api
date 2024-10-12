@@ -112,6 +112,7 @@ func (s *authService) Login(ctx context.Context, email, password string) (string
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id":         user.ID.String(),
+		"role":            user.Role,
 		"subscription_id": subscription.ID.String(),
 		"plan_type":       string(subscription.PlanType),
 		"exp":             time.Now().Add(time.Hour * 24).Unix(),
@@ -161,6 +162,49 @@ func (s *authService) VerifyToken(tokenString string) (*models.User, *models.Sub
 	user, err := s.userRepo.GetByID(context.Background(), userID)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	subscription, err := s.subscriptionRepo.GetActiveByUserID(context.Background(), userID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return user, subscription, nil
+}
+
+var (
+	ErrUnauthorized = errors.New("user is not authorized as admin")
+)
+
+func (s *authService) VerifyTokenAdmin(tokenString string) (*models.User, *models.Subscription, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, ErrInvalidToken
+		}
+		return []byte(s.jwtSecret), nil
+	})
+
+	if err != nil || !token.Valid {
+		return nil, nil, ErrInvalidToken
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, nil, ErrInvalidToken
+	}
+
+	userID, err := uuid.Parse(claims["user_id"].(string))
+	if err != nil {
+		return nil, nil, ErrInvalidToken
+	}
+
+	user, err := s.userRepo.GetByID(context.Background(), userID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if user.Role != "admin" {
+		return nil, nil, ErrUnauthorized
 	}
 
 	subscription, err := s.subscriptionRepo.GetActiveByUserID(context.Background(), userID)
