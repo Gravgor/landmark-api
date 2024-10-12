@@ -28,6 +28,7 @@ type AuthService interface {
 	Register(ctx context.Context, email, password, name string) (*models.User, error)
 	Login(ctx context.Context, email, password string) (string, error)
 	VerifyToken(token string) (*models.User, *models.Subscription, error)
+	VerifyTokenAdmin(token string) (*models.User, *models.Subscription, error)
 	GetAPIKey(ctx context.Context, userID uuid.UUID) (*models.APIKey, error)
 	GetCurrentSubscription(ctx context.Context, userID uuid.UUID) (*models.Subscription, error)
 }

@@ -14,7 +14,7 @@ func AdminMiddleware(authService services.AuthService) func(http.Handler) http.H
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
-			user, subscription, err := authService.VerifyToken(tokenString)
+			user, subscription, err := authService.VerifyTokenAdmin(tokenString)
 			if err != nil {
 				fmt.Print(err)
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
