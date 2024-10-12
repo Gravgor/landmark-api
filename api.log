@@ -60,3 +60,5 @@
 {"ip":"127.0.0.1:49753","level":"info","method":"GET","msg":"Request handled","response_time":878,"status_code":403,"time":"2024-10-12T19:54:04+02:00","url":"/subscription/manage/get-billing"}
 {"level":"info","msg":"API started","port":"8080","time":"2024-10-12T19:54:32+02:00"}
 {"ip":"127.0.0.1:49780","level":"info","method":"GET","msg":"Request handled","response_time":1059,"status_code":403,"time":"2024-10-12T19:54:37+02:00","url":"/subscription/manage/get-billing"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-12T19:59:31+02:00"}
+{"ip":"127.0.0.1:50027","level":"info","method":"GET","msg":"Request handled","response_time":2053,"status_code":200,"time":"2024-10-12T19:59:36+02:00","url":"/subscription/manage/get-billing"}
