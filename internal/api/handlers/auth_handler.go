@@ -28,6 +28,7 @@ type registrationRequest struct {
 	Name     string `json:"name"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
+	Plan     string `json:"plan"`
 }
 
 type registrationResponse struct {
@@ -102,6 +103,31 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
+func (h *AuthHandler) RegisterSub(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req registrationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	user, err := h.authService.RegisterSub(r.Context(), req.Email, req.Password, req.Name, req.Plan)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	resp := registrationResponse{}
+	resp.User.ID = user.ID.String()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
 // Login godoc
 // @Summary Authenticate a user
 // @Description Authenticate a user with the provided email and password
@@ -166,9 +192,6 @@ func (h *AuthHandler) CheckUser(w http.ResponseWriter, r *http.Request) {
 	resp.APIKey = userKeys.Key
 	resp.Email = user.Email
 	resp.PlanType = string(subscription.PlanType)
-	resp.ApiCalls = 1000
-	resp.ApiLimit = 10000
-	resp.Landmarks = 250
 	resp.AccessToken = ""
 
 	w.Header().Set("Content-Type", "application/json")

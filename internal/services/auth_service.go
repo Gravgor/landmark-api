@@ -9,6 +9,8 @@ import (
 
 	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
+	"github.com/stripe/stripe-go/v72"
+	"github.com/stripe/stripe-go/v72/customer"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -26,11 +28,14 @@ var (
 
 type AuthService interface {
 	Register(ctx context.Context, email, password, name string) (*models.User, error)
+	RegisterSub(ctx context.Context, email, password, name, plan string) (*models.User, error)
 	Login(ctx context.Context, email, password string) (string, error)
 	VerifyToken(token string) (*models.User, *models.Subscription, error)
 	VerifyTokenAdmin(token string) (*models.User, *models.Subscription, error)
 	GetAPIKey(ctx context.Context, userID uuid.UUID) (*models.APIKey, error)
 	GetCurrentSubscription(ctx context.Context, userID uuid.UUID) (*models.Subscription, error)
+	GetUserByID(ctx context.Context, userID uuid.UUID) (*models.User, error)
+	GetUserByStripeCustomerID(ctx context.Context, customerID string) (*models.User, error)
 }
 
 type authService struct {
@@ -93,6 +98,49 @@ func (s *authService) Register(ctx context.Context, email, password, name string
 		return user, err
 	}
 
+	return user, nil
+}
+
+func (s *authService) RegisterSub(ctx context.Context, email, password, name, plan string) (*models.User, error) {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+	params := &stripe.CustomerParams{
+		Email: stripe.String(email),
+	}
+	c, err := customer.New(params)
+	if err != nil {
+		return nil, err
+	}
+	user := &models.User{
+		ID:           uuid.New(),
+		Name:         name,
+		Email:        email,
+		PasswordHash: string(hashedPassword),
+		StripeID:     c.ID,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	}
+	if err := s.userRepo.Create(ctx, user); err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func (s *authService) GetUserByID(ctx context.Context, userID uuid.UUID) (*models.User, error) {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func (s *authService) GetUserByStripeCustomerID(ctx context.Context, customerID string) (*models.User, error) {
+	user, err := s.userRepo.GetByStripeCustomerID(ctx, customerID)
+	if err != nil {
+		return nil, err
+	}
 	return user, nil
 }
 

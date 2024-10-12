@@ -38,6 +38,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
+	"github.com/stripe/stripe-go/v72"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
@@ -58,6 +59,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to get underlying *sql.DB instance:", err)
 	}
+	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 	rateLimitConfig := config.NewRateLimitConfig()
 	cacheConfig := config.NewCacheConfig()
 	cacheService, err := services.NewRedisCacheService(cacheConfig)
@@ -103,6 +105,7 @@ func main() {
 	requestLogger := middleware.NewRequestLogger(requestLogService)
 
 	fileUploadHandler := handlers.NewFileUploadHandler()
+	stripeHandler := handlers.NewStripeHandler(authService, subscriptionRepo, userRepo)
 
 	router := mux.NewRouter()
 	router.Use(middleware.LoggingMiddleware)
@@ -135,6 +138,11 @@ func main() {
 	userRouter.HandleFunc("/me", authHandler.CheckUser).Methods("GET")
 	userRouter.HandleFunc("/usage", apiUsageHandler.GetCurrentUsage).Methods("GET")
 	userRouter.HandleFunc("/requests/logs", requestLogHandler.GetUserLogs).Methods("GET")
+
+	subscriptionRouter := router.PathPrefix("/subscription").Subrouter()
+	subscriptionRouter.HandleFunc("/create-checkout", stripeHandler.HandleCreateCheckOut).Methods("POST")
+	subscriptionRouter.HandleFunc("/create-user-account", authHandler.RegisterSub).Methods("POST")
+	subscriptionRouter.HandleFunc("/stripe-webhook", stripeHandler.HandleStripeWebhook).Methods("POST")
 
 	tokenRepo := repository.NewAdminTokenRepository(db)
 	tokenService := services.NewAdminTokenService(tokenRepo)
