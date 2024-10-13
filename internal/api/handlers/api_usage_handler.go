@@ -32,7 +32,7 @@ func (h *UsageHandler) GetCurrentUsage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stats, err := h.usageService.GetCurrentUsage(user.ID.String(), subscription.PlanType)
+	stats, err := h.usageService.GetCurrentUsage(r.Context(), user.ID, subscription.PlanType)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return

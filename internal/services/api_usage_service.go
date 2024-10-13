@@ -1,14 +1,17 @@
 package services
 
 import (
+	"context"
 	"landmark-api/internal/config"
 	"landmark-api/internal/models"
 	"landmark-api/internal/repository"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type APIUsageService interface {
-	GetCurrentUsage(userID string, plan models.SubscriptionPlan) (*UsageStats, error)
+	GetCurrentUsage(ctx context.Context, userID uuid.UUID, plan models.SubscriptionPlan) (*UsageStats, error)
 	IncrementUsage(userID string) error
 }
 
@@ -21,29 +24,45 @@ type UsageStats struct {
 
 type apiUsageService struct {
 	repo       repository.APIUsageRepository
+	subRepo    repository.SubscriptionRepository
 	rateConfig *config.RateLimitConfig
 }
 
-func NewAPIUsageService(repo repository.APIUsageRepository, rateConfig *config.RateLimitConfig) APIUsageService {
+func NewAPIUsageService(repo repository.APIUsageRepository, subRepo repository.SubscriptionRepository, rateConfig *config.RateLimitConfig) APIUsageService {
 	return &apiUsageService{
 		repo:       repo,
+		subRepo:    subRepo,
 		rateConfig: rateConfig,
 	}
 }
 
-func (s *apiUsageService) GetCurrentUsage(userID string, plan models.SubscriptionPlan) (*UsageStats, error) {
-	now := time.Now()
-	periodStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-	periodEnd := periodStart.AddDate(0, 1, 0).Add(-time.Second)
+func (s *apiUsageService) GetCurrentUsage(ctx context.Context, userID uuid.UUID, plan models.SubscriptionPlan) (*UsageStats, error) {
+	// Fetch the user's subscription details
+	subscription, err := s.subRepo.GetActiveByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
 
-	usage, err := s.repo.GetCurrentUsage(userID, periodStart, periodEnd)
+	now := time.Now()
+	periodStart := subscription.StartDate
+	periodEnd := subscription.EndDate
+
+	// If the current time is past the billing date, adjust the period
+	if now.After(periodEnd) {
+		for periodEnd.Before(now) {
+			periodStart = periodEnd
+			periodEnd = periodEnd.AddDate(0, 1, 0)
+		}
+	}
+
+	usage, err := s.repo.GetCurrentUsage(userID.String(), periodStart, periodEnd)
 	if err != nil {
 		return nil, err
 	}
 
 	if usage == nil {
 		usage = &models.APIUsage{
-			UserID:       userID,
+			UserID:       userID.String(),
 			RequestCount: 0,
 			PeriodStart:  periodStart,
 			PeriodEnd:    periodEnd,

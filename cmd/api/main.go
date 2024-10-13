@@ -96,7 +96,7 @@ func main() {
 	landmarkHandler := handlers.NewLandmarkHandler(landmarkService, cacheService, db)
 
 	rateLimiter := middleware.NewRateLimiter(rateLimitConfig)
-	apiUsageService := services.NewAPIUsageService(apiUsageRepo, rateLimitConfig)
+	apiUsageService := services.NewAPIUsageService(apiUsageRepo, subscriptionRepo, rateLimitConfig)
 	apiUsageHandler := handlers.NewUsageHandler(apiUsageService, authService)
 
 	requestLogRepo := repository.NewRequestLogRepository(db)

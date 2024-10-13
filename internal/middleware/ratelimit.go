@@ -45,7 +45,7 @@ func (rl *RateLimiter) RateLimit(authService services.AuthService, apiUsageServi
 			}
 
 			// Get usage from database
-			usageStats, err := apiUsageService.GetCurrentUsage(user.ID.String(), subscription.PlanType)
+			usageStats, err := apiUsageService.GetCurrentUsage(r.Context(), user.ID, subscription.PlanType)
 			if err != nil {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
