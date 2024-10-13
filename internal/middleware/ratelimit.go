@@ -1,4 +1,3 @@
-// middleware/rate_limiter.go
 package middleware
 
 import (
@@ -53,7 +52,7 @@ func (rl *RateLimiter) RateLimit(authService services.AuthService, apiUsageServi
 			}
 
 			// Check if user has exceeded their limit
-			limit := rl.config.Limits[subscription.PlanType] // Fixed: Changed limits to Limits
+			limit := rl.config.Limits[subscription.PlanType]
 			if limit >= 0 && usageStats.CurrentCount >= limit {
 				w.Header().Set("X-RateLimit-Limit", strconv.Itoa(limit))
 				w.Header().Set("X-RateLimit-Remaining", "0")
@@ -62,18 +61,45 @@ func (rl *RateLimiter) RateLimit(authService services.AuthService, apiUsageServi
 				return
 			}
 
-			// Increment usage
-			if err := apiUsageService.IncrementUsage(user.ID.String()); err != nil {
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
+			// Wrap the ResponseWriter to capture the X-Cache header
+			wrappedWriter := &responseWriterWrapper{ResponseWriter: w}
+
+			// Call the next handler
+			next.ServeHTTP(wrappedWriter, r)
+
+			// Check if the response was served from cache
+			isCacheHit := wrappedWriter.Header().Get("X-Cache") == "HIT"
+
+			// Increment usage only if it's not a cache hit
+			if !isCacheHit {
+				if err := apiUsageService.IncrementUsage(user.ID.String()); err != nil {
+					println("Error incrementing usage:", err.Error())
+				}
+				usageStats.CurrentCount++
 			}
 
 			// Update headers with current usage
-			w.Header().Set("X-RateLimit-Limit", strconv.Itoa(limit))
-			w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(limit-usageStats.CurrentCount-1))
-			w.Header().Set("X-RateLimit-Reset", strconv.FormatInt(usageStats.PeriodEnd.Unix(), 10))
-
-			next.ServeHTTP(w, r)
+			wrappedWriter.Header().Set("X-RateLimit-Limit", strconv.Itoa(limit))
+			wrappedWriter.Header().Set("X-RateLimit-Remaining", strconv.Itoa(limit-usageStats.CurrentCount))
+			wrappedWriter.Header().Set("X-RateLimit-Reset", strconv.FormatInt(usageStats.PeriodEnd.Unix(), 10))
 		})
 	}
+}
+
+// responseWriterWrapper is a simple wrapper around http.ResponseWriter that allows us to inspect headers after they've been written
+type responseWriterWrapper struct {
+	http.ResponseWriter
+	wroteHeader bool
+}
+
+func (rww *responseWriterWrapper) WriteHeader(statusCode int) {
+	rww.ResponseWriter.WriteHeader(statusCode)
+	rww.wroteHeader = true
+}
+
+func (rww *responseWriterWrapper) Write(b []byte) (int, error) {
+	if !rww.wroteHeader {
+		rww.WriteHeader(http.StatusOK)
+	}
+	return rww.ResponseWriter.Write(b)
 }
