@@ -107,14 +107,20 @@ func main() {
 	fileUploadHandler := handlers.NewFileUploadHandler()
 	stripeHandler := handlers.NewStripeHandler(authService, subscriptionRepo, userRepo, apiKeyService)
 
+	uptimeService := handlers.NewUptimeService()
+	uptimeHandler := handlers.NewUptimeHandler(uptimeService)
+	uptimeMiddleware := handlers.NewUptimeMiddleware(uptimeService)
+
 	router := mux.NewRouter()
 	router.Use(middleware.LoggingMiddleware)
+	router.Use(uptimeMiddleware.Middleware)
 
 	// Public routes
 	router.HandleFunc("/auth/register", authHandler.Register).Methods("POST")
 	router.HandleFunc("/auth/login", authHandler.Login).Methods("POST")
 	router.HandleFunc("/health", controllers.HealthCheckHandler(db)).Methods("GET")
 	router.HandleFunc("/swagger", httpSwagger.WrapHandler).Methods("GET")
+	router.HandleFunc("/uptime", uptimeHandler.ServeHTTP).Methods("GET")
 
 	// API routes (protected)
 	apiRouter := router.PathPrefix("/api/v1").Subrouter()
