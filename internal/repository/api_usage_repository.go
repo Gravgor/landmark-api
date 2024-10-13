@@ -4,12 +4,13 @@ import (
 	"landmark-api/internal/models"
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type APIUsageRepository interface {
 	GetCurrentUsage(userID string, periodStart, periodEnd time.Time) (*models.APIUsage, error)
-	IncrementUsage(userID string) error
+	IncrementUsage(userID uuid.UUID) error
 	CreateNewPeriod(usage *models.APIUsage) error
 }
 
@@ -31,19 +32,40 @@ func (r *apiUsageRepository) GetCurrentUsage(userID string, periodStart, periodE
 	return &usage, err
 }
 
-func (r *apiUsageRepository) IncrementUsage(userID string) error {
-	now := time.Now()
-	periodStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-	periodEnd := periodStart.AddDate(0, 1, 0).Add(-time.Second)
-
+func (r *apiUsageRepository) IncrementUsage(userID uuid.UUID) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
+		// Fetch the user's subscription
+		var subscription models.Subscription
+		if err := tx.Where("user_id = ?", userID).First(&subscription).Error; err != nil {
+			return err
+		}
+
+		now := time.Now()
+		periodStart := subscription.StartDate
+		periodEnd := subscription.EndDate
+
+		// If the current time is past the billing date, adjust the period
+		if now.After(periodEnd) {
+			for periodEnd.Before(now) {
+				periodStart = periodEnd
+				periodEnd = periodEnd.AddDate(0, 1, 0)
+			}
+			// Update the subscription with the new billing date
+			subscription.StartDate = periodStart
+			subscription.EndDate = periodEnd
+			if err := tx.Save(&subscription).Error; err != nil {
+				return err
+			}
+		}
+
+		// Find or create the API usage record for the current period
 		var usage models.APIUsage
 		err := tx.Where("user_id = ? AND period_start = ? AND period_end = ?",
 			userID, periodStart, periodEnd).First(&usage).Error
 
 		if err == gorm.ErrRecordNotFound {
 			usage = models.APIUsage{
-				UserID:       userID,
+				UserID:       userID.String(),
 				RequestCount: 1,
 				PeriodStart:  periodStart,
 				PeriodEnd:    periodEnd,
@@ -55,6 +77,7 @@ func (r *apiUsageRepository) IncrementUsage(userID string) error {
 			return err
 		}
 
+		// Increment the usage count
 		usage.RequestCount++
 		return tx.Save(&usage).Error
 	})

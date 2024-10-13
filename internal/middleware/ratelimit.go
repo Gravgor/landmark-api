@@ -72,7 +72,7 @@ func (rl *RateLimiter) RateLimit(authService services.AuthService, apiUsageServi
 
 			// Increment usage only if it's not a cache hit
 			if !isCacheHit {
-				if err := apiUsageService.IncrementUsage(user.ID.String()); err != nil {
+				if err := apiUsageService.IncrementUsage(user.ID); err != nil {
 					println("Error incrementing usage:", err.Error())
 				}
 				usageStats.CurrentCount++

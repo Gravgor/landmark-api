@@ -12,7 +12,7 @@ import (
 
 type APIUsageService interface {
 	GetCurrentUsage(ctx context.Context, userID uuid.UUID, plan models.SubscriptionPlan) (*UsageStats, error)
-	IncrementUsage(userID string) error
+	IncrementUsage(userID uuid.UUID) error
 }
 
 type UsageStats struct {
@@ -79,6 +79,6 @@ func (s *apiUsageService) GetCurrentUsage(ctx context.Context, userID uuid.UUID,
 	}, nil
 }
 
-func (s *apiUsageService) IncrementUsage(userID string) error {
+func (s *apiUsageService) IncrementUsage(userID uuid.UUID) error {
 	return s.repo.IncrementUsage(userID)
 }
