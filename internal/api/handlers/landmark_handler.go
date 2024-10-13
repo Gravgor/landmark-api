@@ -409,6 +409,21 @@ func (h *LandmarkHandler) ListLandmarksByName(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	cacheKey := h.getCacheKey("name", name,
+		fmt.Sprintf("limit:%d", queryParams.Limit),
+		fmt.Sprintf("offset:%d", queryParams.Offset),
+		fmt.Sprintf("sort:%s:%s", queryParams.SortBy, queryParams.SortOrder),
+		string(subscription.PlanType))
+
+	if cachedData, err := h.cacheService.Get(ctx, cacheKey); err == nil {
+		var response interface{}
+		if err := json.Unmarshal([]byte(cachedData), &response); err == nil {
+			w.Header().Set("X-Cache", "HIT")
+			respondWithJSON(w, http.StatusOK, response)
+			return
+		}
+	}
+
 	// Build the base query
 	query := h.db.Model(&models.Landmark{}).Where("name ILIKE ?", "%"+name+"%")
 
@@ -438,6 +453,8 @@ func (h *LandmarkHandler) ListLandmarksByName(w http.ResponseWriter, r *http.Req
 
 	// Process the landmarks list based on subscription and query parameters
 	response := h.processLandmarkList(ctx, landmarks, subscription, queryParams)
+	h.cacheService.Set(ctx, cacheKey, response, 15*time.Minute)
+	w.Header().Set("X-Cache", "MISS")
 	respondWithJSON(w, http.StatusOK, response)
 }
 
