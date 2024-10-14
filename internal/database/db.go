@@ -40,10 +40,13 @@ func InitDB() (*gorm.DB, error) {
 		return nil, fmt.Errorf("error migrating database: %v", err)
 	}
 	//migrations.MigrateLandmarks(db)
-
 	return db, nil
 }
 
 func autoMigrate(db *gorm.DB) error {
+	/*err := db.Migrator().DropTable(&models.User{}, &models.APIKey{}, &models.Subscription{})
+	if err != nil {
+		log.Fatal("Failed to drop tables: ", err)
+	}*/
 	return db.AutoMigrate()
 }

@@ -8,7 +8,7 @@ import (
 )
 
 type Landmark struct {
-	ID          uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
+	ID          uuid.UUID      `gorm:"type:uuid;primaryKey" json:"-"`
 	Name        string         `gorm:"type:varchar(255);not null" json:"name"`
 	Description string         `gorm:"type:text;not null" json:"description"`
 	Latitude    float64        `gorm:"type:decimal(10,8);not null" json:"latitude"`
@@ -23,8 +23,8 @@ type Landmark struct {
 }
 
 type LandmarkDetail struct {
-	ID                     uuid.UUID          `gorm:"type:uuid;primaryKey" json:"id"`
-	LandmarkID             uuid.UUID          `gorm:"type:uuid;not null;uniqueIndex" json:"landmark_id"`
+	ID                     uuid.UUID          `gorm:"type:uuid;primaryKey" json:"-"`
+	LandmarkID             uuid.UUID          `gorm:"type:uuid;not null;uniqueIndex" json:"-"`
 	OpeningHours           map[string]string  `gorm:"type:jsonb" json:"opening_hours"`
 	TicketPrices           map[string]float64 `gorm:"type:jsonb" json:"ticket_prices"`
 	HistoricalSignificance string             `gorm:"type:text" json:"historical_significance"`
