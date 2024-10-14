@@ -57,6 +57,15 @@ func (h *FileUploadHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
+	// Define a maximum allowed size (e.g., 10 MB)
+	const MaxAllowedSize = 10 << 20 // 10 MB
+
+	// Validate the file size
+	if header.Size > MaxAllowedSize {
+		http.Error(w, "File size exceeds the maximum allowed limit", http.StatusBadRequest)
+		return
+	}
+
 	// Read the file content
 	buffer := make([]byte, header.Size)
 	_, err = file.Read(buffer)
