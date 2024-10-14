@@ -185,7 +185,7 @@ func (h *AuthHandler) CheckUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Can't fetch user api keys", http.StatusForbidden)
 		return
 	}
-	fmt.Print(userKeys)
+	fmt.Print("User API keys fetched successfully.")
 
 	resp := checkResponse{}
 	resp.Name = user.Name
