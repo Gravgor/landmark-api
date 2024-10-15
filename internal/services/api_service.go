@@ -13,6 +13,7 @@ type APIKeyService interface {
 	GenerateAPIKey() string
 	AssignAPIKeyToUser(ctx context.Context, userID uuid.UUID) (*models.APIKey, error)
 	GetAPIKeyByKey(ctx context.Context, key string) (*models.APIKey, error)
+	GetAPIKeyByUserID(ctx context.Context, userID uuid.UUID) (*models.APIKey, error)
 	UpdateAPIKey(ctx context.Context, userID uuid.UUID, newKey string) error
 	DeleteAPIKey(ctx context.Context, userID uuid.UUID) error
 }
@@ -49,6 +50,14 @@ func (s *apiKeyService) AssignAPIKeyToUser(ctx context.Context, userID uuid.UUID
 
 func (s *apiKeyService) GetAPIKeyByKey(ctx context.Context, key string) (*models.APIKey, error) {
 	apiKey, err := s.apiKeyRepo.GetByKey(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	return apiKey, nil
+}
+
+func (s *apiKeyService) GetAPIKeyByUserID(ctx context.Context, userID uuid.UUID) (*models.APIKey, error) {
+	apiKey, err := s.apiKeyRepo.GetByUserID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}

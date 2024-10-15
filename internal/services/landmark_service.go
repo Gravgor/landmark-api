@@ -2,8 +2,8 @@ package services
 
 import (
 	"context"
+	"landmark-api/internal/errors"
 	"landmark-api/internal/models"
-	"landmark-api/internal/pkg/errors"
 	"landmark-api/internal/repository"
 
 	"github.com/google/uuid"

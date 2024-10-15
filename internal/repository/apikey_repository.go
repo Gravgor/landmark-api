@@ -2,8 +2,8 @@ package repository
 
 import (
 	"context"
+	"landmark-api/internal/errors"
 	"landmark-api/internal/models"
-	"landmark-api/internal/pkg/errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,6 +13,7 @@ import (
 type APIKeyRepository interface {
 	Create(ctx context.Context, apiKey *models.APIKey) error
 	GetByKey(ctx context.Context, key string) (*models.APIKey, error)
+	GetByUserID(ctx context.Context, userID uuid.UUID) (*models.APIKey, error)
 	DeleteByUserID(ctx context.Context, userID uuid.UUID) error
 	UpdateAPIKey(ctx context.Context, userID uuid.UUID, apiKey string) error
 }
@@ -44,6 +45,18 @@ func (r *apiKeyRepository) GetByKey(ctx context.Context, key string) (*models.AP
 		return nil, errors.Wrap(result.Error, "failed to get API key by key")
 	}
 
+	return &apiKey, nil
+}
+
+func (r *apiKeyRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*models.APIKey, error) {
+	var apiKey models.APIKey
+	result := r.db.WithContext(ctx).First(&apiKey, "user_id = ?", userID)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			return nil, errors.ErrNotFound
+		}
+		return nil, errors.Wrap(result.Error, "failed to get API key by id")
+	}
 	return &apiKey, nil
 }
 

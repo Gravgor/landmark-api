@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"landmark-api/cmd/config"
+	"landmark-api/internal/config"
 	"time"
 
 	"github.com/redis/go-redis/v9"

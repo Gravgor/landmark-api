@@ -46,7 +46,19 @@ func (h *LandmarkHandler) getCacheKey(params ...string) string {
 	return fmt.Sprintf("landmark:%s", strings.Join(params, ":"))
 }
 
-// GetLandmark - Enhanced with caching and field selection
+// GetLandmark godoc
+// @Summary Get a landmark by ID
+// @Description Get detailed information about a landmark
+// @Tags landmarks
+// @Accept json
+// @Produce json
+// @Param id path string true "Landmark ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 403 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/landmarks/{id} [get]
 func (h *LandmarkHandler) GetLandmark(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
@@ -88,7 +100,20 @@ func (h *LandmarkHandler) GetLandmark(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, response)
 }
 
-// ListLandmarks with caching
+// ListLandmarks godoc
+// @Summary List landmarks
+// @Description Get a list of landmarks with optional filtering and sorting
+// @Tags landmarks
+// @Accept json
+// @Produce json
+// @Param limit query int false "Number of items to return"
+// @Param offset query int false "Number of items to skip"
+// @Param sort query string false "Sort field and order (e.g., '-name' for descending)"
+// @Param fields query string false "Comma-separated list of fields to include"
+// @Success 200 {object} map[string]interface{}
+// @Failure 403 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/landmarks [get]
 func (h *LandmarkHandler) ListLandmarks(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	queryParams := parseQueryParams(r)
@@ -134,9 +159,21 @@ func (h *LandmarkHandler) ListLandmarks(w http.ResponseWriter, r *http.Request) 
 	respondWithJSON(w, http.StatusOK, response)
 }
 
-// ListLandmarks - Enhanced with filtering, sorting, and field selection
-
-// ListLandmarksByCountry - Enhanced with filtering, sorting, and field selection
+// ListLandmarksByCountry godoc
+// @Summary List landmarks by country
+// @Description Get a list of landmarks for a specific country
+// @Tags landmarks
+// @Accept json
+// @Produce json
+// @Param country path string true "Country name"
+// @Param limit query int false "Number of items to return"
+// @Param offset query int false "Number of items to skip"
+// @Param sort query string false "Sort field and order (e.g., '-name' for descending)"
+// @Param fields query string false "Comma-separated list of fields to include"
+// @Success 200 {object} map[string]interface{}
+// @Failure 403 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/landmarks/country/{country} [get]
 func (h *LandmarkHandler) ListLandmarksByCountry(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
@@ -184,6 +221,21 @@ func (h *LandmarkHandler) ListLandmarksByCountry(w http.ResponseWriter, r *http.
 	respondWithJSON(w, http.StatusOK, response)
 }
 
+// ListLandmarkByCategory godoc
+// @Summary List landmarks by category
+// @Description Get a list of landmarks for a specific category
+// @Tags landmarks
+// @Accept json
+// @Produce json
+// @Param category path string true "Category name"
+// @Param limit query int false "Number of items to return"
+// @Param offset query int false "Number of items to skip"
+// @Param sort query string false "Sort field and order (e.g., '-name' for descending)"
+// @Param fields query string false "Comma-separated list of fields to include"
+// @Success 200 {object} map[string]interface{}
+// @Failure 403 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/landmarks/category/{category} [get]
 func (h *LandmarkHandler) ListLandmarkByCategory(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
@@ -278,7 +330,18 @@ func haversine(lat1, lon1, lat2, lon2 float64) float64 {
 	return R * c
 }
 
-// SearchLandmarks - Searches landmarks within a given radius
+// SearchLandmarks godoc
+// @Summary Search landmarks by proximity
+// @Description Search for landmarks within a given radius of a point
+// @Tags landmarks
+// @Accept json
+// @Produce json
+// @Param request body SearchRequest true "Search parameters"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 403 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/landmarks/search [post]
 func (h *LandmarkHandler) SearchLandmarks(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	subscription, ok := services.SubscriptionFromContext(ctx)
@@ -317,6 +380,22 @@ func (h *LandmarkHandler) SearchLandmarks(w http.ResponseWriter, r *http.Request
 
 	respondWithJSON(w, http.StatusOK, response)
 }
+
+// ListLandmarksByName godoc
+// @Summary List landmarks by name
+// @Description Get a list of landmarks matching a given name (partial match)
+// @Tags landmarks
+// @Accept json
+// @Produce json
+// @Param name path string true "Landmark name (partial)"
+// @Param limit query int false "Number of items to return"
+// @Param offset query int false "Number of items to skip"
+// @Param sort query string false "Sort field and order (e.g., '-name' for descending)"
+// @Param fields query string false "Comma-separated list of fields to include"
+// @Success 200 {object} map[string]interface{}
+// @Failure 403 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/landmarks/name/{name} [get]
 func (h *LandmarkHandler) ListLandmarksByName(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
@@ -328,6 +407,21 @@ func (h *LandmarkHandler) ListLandmarksByName(w http.ResponseWriter, r *http.Req
 	if !ok {
 		respondWithError(w, http.StatusForbidden, "Subscription not found")
 		return
+	}
+
+	cacheKey := h.getCacheKey("name", name,
+		fmt.Sprintf("limit:%d", queryParams.Limit),
+		fmt.Sprintf("offset:%d", queryParams.Offset),
+		fmt.Sprintf("sort:%s:%s", queryParams.SortBy, queryParams.SortOrder),
+		string(subscription.PlanType))
+
+	if cachedData, err := h.cacheService.Get(ctx, cacheKey); err == nil {
+		var response interface{}
+		if err := json.Unmarshal([]byte(cachedData), &response); err == nil {
+			w.Header().Set("X-Cache", "HIT")
+			respondWithJSON(w, http.StatusOK, response)
+			return
+		}
 	}
 
 	// Build the base query
@@ -359,7 +453,59 @@ func (h *LandmarkHandler) ListLandmarksByName(w http.ResponseWriter, r *http.Req
 
 	// Process the landmarks list based on subscription and query parameters
 	response := h.processLandmarkList(ctx, landmarks, subscription, queryParams)
+	h.cacheService.Set(ctx, cacheKey, response, 15*time.Minute)
+	w.Header().Set("X-Cache", "MISS")
 	respondWithJSON(w, http.StatusOK, response)
+}
+
+func (h *LandmarkHandler) CreateLandmark(w http.ResponseWriter, r *http.Request) {
+
+	// Parse the request body
+	var landmarkData struct {
+		Landmark       models.Landmark       `json:"landmark"`
+		LandmarkDetail models.LandmarkDetail `json:"landmark_detail"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&landmarkData); err != nil {
+		log.Printf("Error decoding JSON: %v", err)
+		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	// Start a database transaction
+	tx := h.db.Begin()
+	if tx.Error != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to start database transaction")
+		return
+	}
+
+	// Create the Landmark
+	landmarkData.Landmark.ID = uuid.New() // Generate a new UUID for the landmark
+	if err := tx.Create(&landmarkData.Landmark).Error; err != nil {
+		tx.Rollback()
+		respondWithError(w, http.StatusInternalServerError, "Failed to create landmark")
+		return
+	}
+
+	// Create the LandmarkDetail
+	landmarkData.LandmarkDetail.ID = uuid.New() // Generate a new UUID for the landmark detail
+	landmarkData.LandmarkDetail.LandmarkID = landmarkData.Landmark.ID
+	if err := tx.Create(&landmarkData.LandmarkDetail).Error; err != nil {
+		tx.Rollback()
+		respondWithError(w, http.StatusInternalServerError, "Failed to create landmark details")
+		return
+	}
+
+	// Commit the transaction
+	if err := tx.Commit().Error; err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to commit transaction")
+		return
+	}
+
+	// Prepare the response
+	response := h.mergeLandmarkAndDetails(&landmarkData.Landmark, &landmarkData.LandmarkDetail)
+
+	respondWithJSON(w, http.StatusCreated, response)
 }
 
 // Helper functions

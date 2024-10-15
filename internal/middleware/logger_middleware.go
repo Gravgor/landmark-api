@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"landmark-api/cmd/logger"
+	"landmark-api/internal/logger"
 	"net/http"
 	"time"
 

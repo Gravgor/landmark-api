@@ -9,6 +9,8 @@ import (
 
 	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
+	"github.com/stripe/stripe-go/v72"
+	"github.com/stripe/stripe-go/v72/customer"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -25,9 +27,15 @@ var (
 )
 
 type AuthService interface {
-	Register(ctx context.Context, email, password string) (*models.User, error)
+	Register(ctx context.Context, email, password, name string) (*models.User, error)
+	RegisterSub(ctx context.Context, email, password, name string) (*models.User, error)
 	Login(ctx context.Context, email, password string) (string, error)
 	VerifyToken(token string) (*models.User, *models.Subscription, error)
+	VerifyTokenAdmin(token string) (*models.User, *models.Subscription, error)
+	GetAPIKey(ctx context.Context, userID uuid.UUID) (*models.APIKey, error)
+	GetCurrentSubscription(ctx context.Context, userID uuid.UUID) (*models.Subscription, error)
+	GetUserByID(ctx context.Context, userID uuid.UUID) (*models.User, error)
+	GetUserByStripeCustomerID(ctx context.Context, customerID string) (*models.User, error)
 }
 
 type authService struct {
@@ -51,7 +59,7 @@ func NewAuthService(
 	}
 }
 
-func (s *authService) Register(ctx context.Context, email, password string) (*models.User, error) {
+func (s *authService) Register(ctx context.Context, email, password, name string) (*models.User, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
@@ -59,6 +67,7 @@ func (s *authService) Register(ctx context.Context, email, password string) (*mo
 
 	user := &models.User{
 		ID:           uuid.New(),
+		Name:         name,
 		Email:        email,
 		PasswordHash: string(hashedPassword),
 		CreatedAt:    time.Now(),
@@ -92,6 +101,50 @@ func (s *authService) Register(ctx context.Context, email, password string) (*mo
 	return user, nil
 }
 
+func (s *authService) RegisterSub(ctx context.Context, email, password, name string) (*models.User, error) {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+	params := &stripe.CustomerParams{
+		Email: stripe.String(email),
+	}
+	c, err := customer.New(params)
+	if err != nil {
+		return nil, err
+	}
+	user := &models.User{
+		ID:           uuid.New(),
+		Name:         name,
+		Email:        email,
+		PasswordHash: string(hashedPassword),
+		StripeID:     c.ID,
+		HasAccess:    false,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	}
+	if err := s.userRepo.Create(ctx, user); err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func (s *authService) GetUserByID(ctx context.Context, userID uuid.UUID) (*models.User, error) {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func (s *authService) GetUserByStripeCustomerID(ctx context.Context, customerID string) (*models.User, error) {
+	user, err := s.userRepo.GetByStripeCustomerID(ctx, customerID)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
 func (s *authService) Login(ctx context.Context, email, password string) (string, error) {
 	user, err := s.userRepo.GetByEmail(ctx, email)
 	if err != nil {
@@ -109,12 +162,29 @@ func (s *authService) Login(ctx context.Context, email, password string) (string
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id":         user.ID.String(),
+		"role":            user.Role,
 		"subscription_id": subscription.ID.String(),
 		"plan_type":       string(subscription.PlanType),
 		"exp":             time.Now().Add(time.Hour * 24).Unix(),
 	})
 
 	return token.SignedString([]byte(s.jwtSecret))
+}
+
+func (s *authService) GetAPIKey(ctx context.Context, userID uuid.UUID) (*models.APIKey, error) {
+	userKey, err := s.apiKeyService.GetAPIKeyByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return userKey, nil
+}
+
+func (s *authService) GetCurrentSubscription(ctx context.Context, userID uuid.UUID) (*models.Subscription, error) {
+	subscription, err := s.subscriptionRepo.GetActiveByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return subscription, nil
 }
 
 func (s *authService) VerifyToken(tokenString string) (*models.User, *models.Subscription, error) {
@@ -142,6 +212,49 @@ func (s *authService) VerifyToken(tokenString string) (*models.User, *models.Sub
 	user, err := s.userRepo.GetByID(context.Background(), userID)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	subscription, err := s.subscriptionRepo.GetActiveByUserID(context.Background(), userID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return user, subscription, nil
+}
+
+var (
+	ErrUnauthorized = errors.New("user is not authorized as admin")
+)
+
+func (s *authService) VerifyTokenAdmin(tokenString string) (*models.User, *models.Subscription, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, ErrInvalidToken
+		}
+		return []byte(s.jwtSecret), nil
+	})
+
+	if err != nil || !token.Valid {
+		return nil, nil, ErrInvalidToken
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, nil, ErrInvalidToken
+	}
+
+	userID, err := uuid.Parse(claims["user_id"].(string))
+	if err != nil {
+		return nil, nil, ErrInvalidToken
+	}
+
+	user, err := s.userRepo.GetByID(context.Background(), userID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if user.Role != "admin" {
+		return nil, nil, ErrUnauthorized
 	}
 
 	subscription, err := s.subscriptionRepo.GetActiveByUserID(context.Background(), userID)
