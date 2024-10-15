@@ -459,11 +459,11 @@ func (h *LandmarkHandler) ListLandmarksByName(w http.ResponseWriter, r *http.Req
 }
 
 func (h *LandmarkHandler) CreateLandmark(w http.ResponseWriter, r *http.Request) {
-
 	// Parse the request body
 	var landmarkData struct {
 		Landmark       models.Landmark       `json:"landmark"`
 		LandmarkDetail models.LandmarkDetail `json:"landmark_detail"`
+		ImageURLs      []string              `json:"image_urls"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&landmarkData); err != nil {
@@ -481,10 +481,25 @@ func (h *LandmarkHandler) CreateLandmark(w http.ResponseWriter, r *http.Request)
 
 	// Create the Landmark
 	landmarkData.Landmark.ID = uuid.New() // Generate a new UUID for the landmark
+
 	if err := tx.Create(&landmarkData.Landmark).Error; err != nil {
 		tx.Rollback()
 		respondWithError(w, http.StatusInternalServerError, "Failed to create landmark")
 		return
+	}
+
+	// Create LandmarkImage entries
+	for _, url := range landmarkData.ImageURLs {
+		landmarkImage := models.LandmarkImage{
+			ID:         uuid.New(),
+			LandmarkID: landmarkData.Landmark.ID,
+			ImageURL:   url,
+		}
+		if err := tx.Create(&landmarkImage).Error; err != nil {
+			tx.Rollback()
+			respondWithError(w, http.StatusInternalServerError, "Failed to create landmark image")
+			return
+		}
 	}
 
 	// Create the LandmarkDetail
@@ -502,8 +517,15 @@ func (h *LandmarkHandler) CreateLandmark(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Fetch the created landmark with its images
+	var createdLandmark models.Landmark
+	if err := h.db.Preload("Images").First(&createdLandmark, landmarkData.Landmark.ID).Error; err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to fetch created landmark")
+		return
+	}
+
 	// Prepare the response
-	response := h.mergeLandmarkAndDetails(&landmarkData.Landmark, &landmarkData.LandmarkDetail)
+	response := h.mergeLandmarkAndDetails(&createdLandmark, &landmarkData.LandmarkDetail)
 
 	respondWithJSON(w, http.StatusCreated, response)
 }
@@ -667,10 +689,18 @@ func (h *LandmarkHandler) filterBasicLandmarkInfo(landmark *models.Landmark) map
 // mergeLandmarkAndDetails combines landmark data with its details based on subscription
 func (h *LandmarkHandler) mergeLandmarkAndDetails(landmark *models.Landmark, details *models.LandmarkDetail) map[string]interface{} {
 	merged := h.filterBasicLandmarkInfo(landmark)
+
+	// Add image information
+	merged["images"] = landmark.Images
+	merged["main_image"] = landmark.GetMainImage()
+
+	// Fetch weather data
 	weatherData, err := services.FetchWeatherData(landmark.Latitude, landmark.Longitude)
 	if err != nil {
-		fmt.Print("Error with weather")
+		log.Printf("Error fetching weather data: %v", err)
+		weatherData = nil
 	}
+
 	if details != nil {
 		additionalInfo := map[string]interface{}{
 			"opening_hours":           details.OpeningHours,
@@ -681,8 +711,7 @@ func (h *LandmarkHandler) mergeLandmarkAndDetails(landmark *models.Landmark, det
 			"weather_info":            weatherData,
 		}
 
-		// Add weather info for enterprise plan
-
+		// Add additional info based on subscription level
 		for k, v := range additionalInfo {
 			merged[k] = v
 		}
