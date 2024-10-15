@@ -104,7 +104,16 @@ func main() {
 	requestLogHandler := handlers.NewRequestLogHandler(requestLogService)
 	requestLogger := middleware.NewRequestLogger(requestLogService)
 
-	fileUploadHandler, err := handlers.NewFileUploadHandler("eu-north-1", "properties-photos")
+	awsRegion := os.Getenv("AWS_REGION")
+	awsBucket := os.Getenv("AWS_BUCKET")
+	if awsRegion == "" {
+		log.Fatal("AWS Region is nedeed")
+	}
+	if awsBucket == "" {
+		log.Fatal("AWS Bucket is nedeed")
+	}
+
+	fileUploadHandler, err := handlers.NewFileUploadHandler(awsRegion, awsBucket)
 	if err != nil {
 		log.Fatal("Error with file handler")
 	}

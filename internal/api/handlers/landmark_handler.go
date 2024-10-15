@@ -141,7 +141,7 @@ func (h *LandmarkHandler) ListLandmarks(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	query := h.db.Model(&models.Landmark{})
+	query := h.db.Model(&models.Landmark{}).Preload("Images")
 	query = applyFilters(query, queryParams.Filters)
 	query = applySorting(query, queryParams.SortBy, queryParams.SortOrder)
 
@@ -268,7 +268,7 @@ func (h *LandmarkHandler) ListLandmarkByCategory(w http.ResponseWriter, r *http.
 	}
 
 	// Cache miss or error - fetch from database
-	query := h.db.Model(&models.Landmark{}).Where("category = ?", category)
+	query := h.db.Model(&models.Landmark{}).Where("category = ?", category).Preload("images")
 	query = applyFilters(query, queryParams.Filters)
 	query = applySorting(query, queryParams.SortBy, queryParams.SortOrder)
 
@@ -425,7 +425,7 @@ func (h *LandmarkHandler) ListLandmarksByName(w http.ResponseWriter, r *http.Req
 	}
 
 	// Build the base query
-	query := h.db.Model(&models.Landmark{}).Where("name ILIKE ?", "%"+name+"%")
+	query := h.db.Model(&models.Landmark{}).Where("name ILIKE ?", "%"+name+"%").Preload("images")
 
 	// Apply additional filters and sorting
 	query = applyFilters(query, queryParams.Filters)
@@ -660,7 +660,7 @@ func (h *LandmarkHandler) getLandmarkAndSubscription(ctx context.Context, id uui
 	}
 
 	var landmark models.Landmark
-	if err := h.db.First(&landmark, "id = ?", id).Error; err != nil {
+	if err := h.db.Preload("Images").First(&landmark, "id = ?", id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			respondWithError(w, http.StatusNotFound, "Landmark not found")
 		} else {
@@ -683,6 +683,7 @@ func (h *LandmarkHandler) filterBasicLandmarkInfo(landmark *models.Landmark) map
 		"latitude":    landmark.Latitude,
 		"longitude":   landmark.Longitude,
 		"image_url":   landmark.ImageUrl,
+		"images":      landmark.Images,
 	}
 }
 
@@ -692,7 +693,6 @@ func (h *LandmarkHandler) mergeLandmarkAndDetails(landmark *models.Landmark, det
 
 	// Add image information
 	merged["images"] = landmark.Images
-	merged["main_image"] = landmark.GetMainImage()
 
 	// Fetch weather data
 	weatherData, err := services.FetchWeatherData(landmark.Latitude, landmark.Longitude)
