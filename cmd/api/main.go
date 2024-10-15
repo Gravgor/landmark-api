@@ -104,7 +104,10 @@ func main() {
 	requestLogHandler := handlers.NewRequestLogHandler(requestLogService)
 	requestLogger := middleware.NewRequestLogger(requestLogService)
 
-	fileUploadHandler := handlers.NewFileUploadHandler()
+	fileUploadHandler, err := handlers.NewFileUploadHandler("eu-north-1", "properties-photos")
+	if err != nil {
+		log.Fatal("Error with file handler")
+	}
 	stripeHandler := handlers.NewStripeHandler(authService, subscriptionRepo, userRepo, apiKeyService)
 
 	uptimeService := handlers.NewUptimeService()
