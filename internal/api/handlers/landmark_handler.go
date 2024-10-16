@@ -160,35 +160,27 @@ func (h *LandmarkHandler) ListLandmarks(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *LandmarkHandler) ListAdminLandmarks(w http.ResponseWriter, r *http.Request) {
-	// Start with a base query
-	query := h.db.Model(&models.Landmark{}).
-		Preload("Images")
+	ctx := r.Context()
 
-	// Execute the query to get all landmarks
-	var landmarks []models.Landmark
-	if err := query.Find(&landmarks).Error; err != nil {
+	// Fetch all landmarks
+	landmarks, err := h.landmarkService.GetAllLandmarks(ctx)
+	if err != nil {
 		log.Printf("Error fetching landmarks: %v", err)
 		respondWithError(w, http.StatusInternalServerError, "Error fetching landmarks")
 		return
 	}
 
-	// Fetch LandmarkDetails separately
-	var landmarkDetails []models.LandmarkDetail
-	if err := h.db.Find(&landmarkDetails).Error; err != nil {
-		log.Printf("Error fetching landmark details: %v", err)
-		respondWithError(w, http.StatusInternalServerError, "Error fetching landmark details")
-		return
-	}
-
-	// Create a map for quick lookup of LandmarkDetails
-	detailsMap := make(map[uuid.UUID]models.LandmarkDetail)
-	for _, detail := range landmarkDetails {
-		detailsMap[detail.LandmarkID] = detail
-	}
-
 	// Prepare the response with full landmark information
 	var fullLandmarks []map[string]interface{}
 	for _, landmark := range landmarks {
+		// Fetch admin details for each landmark
+		details, err := h.landmarkService.GetLandmarkAdminDetails(ctx, landmark.ID)
+		if err != nil {
+			log.Printf("Error fetching details for landmark %s: %v", landmark.ID, err)
+			// Decide whether to skip this landmark or continue with partial data
+			continue
+		}
+
 		fullLandmark := map[string]interface{}{
 			"id":          landmark.ID,
 			"name":        landmark.Name,
@@ -204,13 +196,13 @@ func (h *LandmarkHandler) ListAdminLandmarks(w http.ResponseWriter, r *http.Requ
 			"updated_at":  landmark.UpdatedAt,
 		}
 
-		// Add LandmarkDetail information if available
-		if detail, ok := detailsMap[landmark.ID]; ok {
-			fullLandmark["opening_hours"] = detail.OpeningHours
-			fullLandmark["ticket_prices"] = detail.TicketPrices
-			fullLandmark["historical_significance"] = detail.HistoricalSignificance
-			fullLandmark["visitor_tips"] = detail.VisitorTips
-			fullLandmark["accessibility_info"] = detail.AccessibilityInfo
+		// Add admin details
+		if details != nil {
+			fullLandmark["opening_hours"] = details.OpeningHours
+			fullLandmark["ticket_prices"] = details.TicketPrices
+			fullLandmark["historical_significance"] = details.HistoricalSignificance
+			fullLandmark["visitor_tips"] = details.VisitorTips
+			fullLandmark["accessibility_info"] = details.AccessibilityInfo
 		}
 
 		fullLandmarks = append(fullLandmarks, fullLandmark)

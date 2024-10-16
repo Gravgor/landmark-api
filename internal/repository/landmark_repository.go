@@ -13,6 +13,7 @@ import (
 type LandmarkRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*models.Landmark, error)
 	List(ctx context.Context, limit, offset int) ([]models.Landmark, error)
+	ListAll(ctx context.Context) ([]models.Landmark, error)
 	Create(ctx context.Context, landmark *models.Landmark) error
 	Update(ctx context.Context, landmark *models.Landmark) error
 	Delete(ctx context.Context, id uuid.UUID) error
@@ -37,6 +38,14 @@ func (r *landmarkRepository) GetByID(ctx context.Context, id uuid.UUID) (*models
 		return nil, nil
 	}
 	return &landmark, err
+}
+
+func (r *landmarkRepository) ListAll(ctx context.Context) ([]models.Landmark, error) {
+	var landmarks []models.Landmark
+	err := r.db.WithContext(ctx).
+		Order("created_at DESC").Find(&landmarks).Error
+
+	return landmarks, err
 }
 
 func (r *landmarkRepository) List(ctx context.Context, limit, offset int) ([]models.Landmark, error) {
