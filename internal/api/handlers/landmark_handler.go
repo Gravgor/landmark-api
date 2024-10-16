@@ -141,7 +141,7 @@ func (h *LandmarkHandler) ListLandmarks(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	query := h.db.Model(&models.Landmark{}).Preload("Images")
+	query := h.db.Model(&models.Landmark{}).Preload("images")
 	query = applyFilters(query, queryParams.Filters)
 	query = applySorting(query, queryParams.SortBy, queryParams.SortOrder)
 
@@ -157,6 +157,16 @@ func (h *LandmarkHandler) ListLandmarks(w http.ResponseWriter, r *http.Request) 
 	h.cacheService.Set(ctx, cacheKey, response, 15*time.Minute)
 	w.Header().Set("X-Cache", "MISS")
 	respondWithJSON(w, http.StatusOK, response)
+}
+
+func (h *LandmarkHandler) ListAdminLandmarks(w http.ResponseWriter, r *http.Request) {
+	query := h.db.Model(&models.Landmark{}).Preload("images")
+	var landmarks []models.Landmark
+	if err := query.Find(&landmarks).Error; err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error fetching landmarks")
+		return
+	}
+	respondWithJSON(w, http.StatusOK, landmarks)
 }
 
 // ListLandmarksByCountry godoc
@@ -528,6 +538,147 @@ func (h *LandmarkHandler) CreateLandmark(w http.ResponseWriter, r *http.Request)
 	response := h.mergeLandmarkAndDetails(&createdLandmark, &landmarkData.LandmarkDetail)
 
 	respondWithJSON(w, http.StatusCreated, response)
+}
+
+func (h *LandmarkHandler) AdminEditHandler(w http.ResponseWriter, r *http.Request) {
+	// Extract landmark ID from the URL
+	vars := mux.Vars(r)
+	id, err := uuid.Parse(vars["id"])
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid landmark ID")
+		return
+	}
+
+	// Decode the request body
+	var updateData struct {
+		Landmark struct {
+			Name        string  `json:"name"`
+			Description string  `json:"description"`
+			Latitude    float64 `json:"latitude"`
+			Longitude   float64 `json:"longitude"`
+			Country     string  `json:"country"`
+			City        string  `json:"city"`
+			Category    string  `json:"category"`
+		} `json:"landmark"`
+		LandmarkDetail struct {
+			OpeningHours           string `json:"opening_hours"`
+			TicketPrices           string `json:"ticket_prices"`
+			HistoricalSignificance string `json:"historical_significance"`
+			VisitorTips            string `json:"visitor_tips"`
+			AccessibilityInfo      string `json:"accessibility_info"`
+		} `json:"landmark_detail"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&updateData); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	// Start a database transaction
+	tx := h.db.Begin()
+	if tx.Error != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to start database transaction")
+		return
+	}
+
+	// Update the Landmark
+	if err := tx.Model(&models.Landmark{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"name":        updateData.Landmark.Name,
+		"description": updateData.Landmark.Description,
+		"latitude":    updateData.Landmark.Latitude,
+		"longitude":   updateData.Landmark.Longitude,
+		"country":     updateData.Landmark.Country,
+		"city":        updateData.Landmark.City,
+		"category":    updateData.Landmark.Category,
+	}).Error; err != nil {
+		tx.Rollback()
+		respondWithError(w, http.StatusInternalServerError, "Failed to update landmark")
+		return
+	}
+
+	// Update the LandmarkDetail
+	if err := tx.Model(&models.LandmarkDetail{}).Where("landmark_id = ?", id).Updates(map[string]interface{}{
+		"opening_hours":           updateData.LandmarkDetail.OpeningHours,
+		"ticket_prices":           updateData.LandmarkDetail.TicketPrices,
+		"historical_significance": updateData.LandmarkDetail.HistoricalSignificance,
+		"visitor_tips":            updateData.LandmarkDetail.VisitorTips,
+		"accessibility_info":      updateData.LandmarkDetail.AccessibilityInfo,
+	}).Error; err != nil {
+		tx.Rollback()
+		respondWithError(w, http.StatusInternalServerError, "Failed to update landmark details")
+		return
+	}
+
+	// Commit the transaction
+	if err := tx.Commit().Error; err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to commit transaction")
+		return
+	}
+
+	// Fetch the updated landmark with its details
+	var updatedLandmark models.Landmark
+	var updatedDetails models.LandmarkDetail
+
+	if err := h.db.Preload("Images").First(&updatedLandmark, id).Error; err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to fetch updated landmark")
+		return
+	}
+
+	if err := h.db.First(&updatedDetails, "landmark_id = ?", id).Error; err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to fetch updated landmark details")
+		return
+	}
+
+	// Prepare the response
+	response := h.mergeLandmarkAndDetails(&updatedLandmark, &updatedDetails)
+
+	respondWithJSON(w, http.StatusOK, response)
+}
+
+func (h *LandmarkHandler) AdminDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := uuid.Parse(vars["id"])
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid landmark ID")
+		return
+	}
+
+	tx := h.db.Begin()
+	if tx.Error != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to start database transaction")
+		return
+	}
+
+	if err := tx.Where("landmark_id = ?", id).Delete(&models.LandmarkImage{}).Error; err != nil {
+		tx.Rollback()
+		respondWithError(w, http.StatusInternalServerError, "Failed to delete associated images")
+		return
+	}
+
+	if err := tx.Where("landmark_id = ?", id).Delete(&models.LandmarkDetail{}).Error; err != nil {
+		tx.Rollback()
+		respondWithError(w, http.StatusInternalServerError, "Failed to delete landmark details")
+		return
+	}
+
+	if err := tx.Delete(&models.Landmark{}, id).Error; err != nil {
+		tx.Rollback()
+		respondWithError(w, http.StatusInternalServerError, "Failed to delete landmark")
+		return
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to commit transaction")
+		return
+	}
+
+	cacheKey := h.getCacheKey("id", id.String())
+	if err := h.cacheService.Delete(r.Context(), cacheKey); err != nil {
+		log.Printf("Failed to delete cache entry: %v", err)
+	}
+
+	// Respond with a success message
+	respondWithJSON(w, http.StatusOK, map[string]string{"message": "Landmark deleted successfully"})
 }
 
 // Helper functions

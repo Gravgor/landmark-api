@@ -185,6 +185,9 @@ func main() {
 	adminRouter.Use(middleware.AdminMiddleware(authService))
 	adminRouter.HandleFunc("/landmarks/upload-photo", fileUploadHandler.Upload).Methods("POST")
 	adminRouter.HandleFunc("/landmarks/create", landmarkHandler.CreateLandmark).Methods("POST")
+	adminRouter.HandleFunc("/landmarks", landmarkHandler.ListAdminLandmarks).Methods("GET")
+	adminRouter.HandleFunc("/landmarks/{id}", landmarkHandler.AdminEditHandler).Methods("PUT")
+	adminRouter.HandleFunc("/landmarks/{id}", landmarkHandler.AdminDeleteHandler).Methods("DELETE")
 
 	go func() {
 		for {
