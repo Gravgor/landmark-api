@@ -178,12 +178,6 @@ func (h *LandmarkHandler) ListAdminLandmarks(w http.ResponseWriter, r *http.Requ
 	searchTerm := r.URL.Query().Get("search")
 	category := r.URL.Query().Get("category")
 
-	adminID := 0
-	err = h.auditService.CreateAuditLog(r.Context(), adminID, "LISTED", "LANDMARKS", "0", "Listed all landmarks")
-	if err != nil {
-		log.Printf("Failed to create audit log: %v", err)
-	}
-
 	// Fetch landmarks with pagination, search, and category filter
 	landmarks, total, err := h.landmarkService.GetLandmarksWithFilters(ctx, page, perPage, searchTerm, category)
 	if err != nil {
