@@ -161,7 +161,8 @@ func (h *LandmarkHandler) ListLandmarks(w http.ResponseWriter, r *http.Request) 
 
 func (h *LandmarkHandler) ListAdminLandmarks(w http.ResponseWriter, r *http.Request) {
 	// Start with a base query
-	query := h.db.Model(&models.Landmark{}).Preload("Images")
+	query := h.db.Model(&models.Landmark{}).
+		Preload("Images")
 
 	// Execute the query to get all landmarks
 	var landmarks []models.Landmark
@@ -171,10 +172,53 @@ func (h *LandmarkHandler) ListAdminLandmarks(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Prepare the response
+	// Fetch LandmarkDetails separately
+	var landmarkDetails []models.LandmarkDetail
+	if err := h.db.Find(&landmarkDetails).Error; err != nil {
+		log.Printf("Error fetching landmark details: %v", err)
+		respondWithError(w, http.StatusInternalServerError, "Error fetching landmark details")
+		return
+	}
+
+	// Create a map for quick lookup of LandmarkDetails
+	detailsMap := make(map[uuid.UUID]models.LandmarkDetail)
+	for _, detail := range landmarkDetails {
+		detailsMap[detail.LandmarkID] = detail
+	}
+
+	// Prepare the response with full landmark information
+	var fullLandmarks []map[string]interface{}
+	for _, landmark := range landmarks {
+		fullLandmark := map[string]interface{}{
+			"id":          landmark.ID,
+			"name":        landmark.Name,
+			"description": landmark.Description,
+			"latitude":    landmark.Latitude,
+			"longitude":   landmark.Longitude,
+			"country":     landmark.Country,
+			"city":        landmark.City,
+			"category":    landmark.Category,
+			"image_url":   landmark.ImageUrl,
+			"images":      landmark.Images,
+			"created_at":  landmark.CreatedAt,
+			"updated_at":  landmark.UpdatedAt,
+		}
+
+		// Add LandmarkDetail information if available
+		if detail, ok := detailsMap[landmark.ID]; ok {
+			fullLandmark["opening_hours"] = detail.OpeningHours
+			fullLandmark["ticket_prices"] = detail.TicketPrices
+			fullLandmark["historical_significance"] = detail.HistoricalSignificance
+			fullLandmark["visitor_tips"] = detail.VisitorTips
+			fullLandmark["accessibility_info"] = detail.AccessibilityInfo
+		}
+
+		fullLandmarks = append(fullLandmarks, fullLandmark)
+	}
+
 	response := map[string]interface{}{
-		"landmarks": landmarks,
-		"total":     len(landmarks),
+		"landmarks": fullLandmarks,
+		"total":     len(fullLandmarks),
 	}
 
 	respondWithJSON(w, http.StatusOK, response)
