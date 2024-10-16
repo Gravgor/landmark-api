@@ -13,7 +13,7 @@ import (
 type LandmarkRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*models.Landmark, error)
 	List(ctx context.Context, limit, offset int) ([]models.Landmark, error)
-	ListAll(ctx context.Context) ([]models.Landmark, error)
+	ListWithFilters(ctx context.Context, page, perPage int, searchTerm, category string) ([]models.Landmark, int64, error)
 	Create(ctx context.Context, landmark *models.Landmark) error
 	Update(ctx context.Context, landmark *models.Landmark) error
 	Delete(ctx context.Context, id uuid.UUID) error
@@ -40,12 +40,32 @@ func (r *landmarkRepository) GetByID(ctx context.Context, id uuid.UUID) (*models
 	return &landmark, err
 }
 
-func (r *landmarkRepository) ListAll(ctx context.Context) ([]models.Landmark, error) {
+func (r *landmarkRepository) ListWithFilters(ctx context.Context, page, perPage int, searchTerm, category string) ([]models.Landmark, int64, error) {
 	var landmarks []models.Landmark
-	err := r.db.WithContext(ctx).
-		Order("created_at DESC").Find(&landmarks).Error
+	var total int64
 
-	return landmarks, err
+	query := r.db.WithContext(ctx).Model(&models.Landmark{})
+
+	if searchTerm != "" {
+		query = query.Where("name ILIKE ? OR description ILIKE ?", "%"+searchTerm+"%", "%"+searchTerm+"%")
+	}
+
+	if category != "" {
+		query = query.Where("category = ?", category)
+	}
+
+	err := query.Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * perPage
+	err = query.Order("created_at DESC").
+		Offset(offset).
+		Limit(perPage).
+		Find(&landmarks).Error
+
+	return landmarks, total, err
 }
 
 func (r *landmarkRepository) List(ctx context.Context, limit, offset int) ([]models.Landmark, error) {

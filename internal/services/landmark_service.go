@@ -12,7 +12,7 @@ import (
 type LandmarkService interface {
 	GetLandmark(ctx context.Context, id uuid.UUID) (*models.Landmark, error)
 	ListLandmarks(ctx context.Context, page, pageSize int) ([]models.Landmark, error)
-	GetAllLandmarks(ctx context.Context) ([]models.Landmark, error)
+	GetLandmarksWithFilters(ctx context.Context, page, perPage int, searchTerm, category string) ([]models.Landmark, int64, error)
 	GetLandmarkDetails(ctx context.Context, id uuid.UUID, userSubscription models.SubscriptionPlan) (*models.LandmarkDetail, error)
 	GetLandmarkAdminDetails(ctx context.Context, id uuid.UUID) (*models.LandmarkDetail, error)
 	GetLandmarksByCountry(ctx context.Context, country string) ([]models.Landmark, error)
@@ -31,8 +31,8 @@ func (s *landmarkService) GetLandmark(ctx context.Context, id uuid.UUID) (*model
 	return s.landmarkRepo.GetByID(ctx, id)
 }
 
-func (s *landmarkService) GetAllLandmarks(ctx context.Context) ([]models.Landmark, error) {
-	return s.landmarkRepo.ListAll(ctx)
+func (s *landmarkService) GetLandmarksWithFilters(ctx context.Context, page, perPage int, searchTerm, category string) ([]models.Landmark, int64, error) {
+	return s.landmarkRepo.ListWithFilters(ctx, page, perPage, searchTerm, category)
 }
 
 func (s *landmarkService) ListLandmarks(ctx context.Context, page, pageSize int) ([]models.Landmark, error) {

@@ -162,8 +162,22 @@ func (h *LandmarkHandler) ListLandmarks(w http.ResponseWriter, r *http.Request) 
 func (h *LandmarkHandler) ListAdminLandmarks(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	// Fetch all landmarks
-	landmarks, err := h.landmarkService.GetAllLandmarks(ctx)
+	// Parse query parameters
+	page, err := strconv.Atoi(r.URL.Query().Get("page"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	perPage, err := strconv.Atoi(r.URL.Query().Get("per_page"))
+	if err != nil || perPage < 1 {
+		perPage = 10 // Default to 10 items per page
+	}
+
+	searchTerm := r.URL.Query().Get("search")
+	category := r.URL.Query().Get("category")
+
+	// Fetch landmarks with pagination, search, and category filter
+	landmarks, total, err := h.landmarkService.GetLandmarksWithFilters(ctx, page, perPage, searchTerm, category)
 	if err != nil {
 		log.Printf("Error fetching landmarks: %v", err)
 		respondWithError(w, http.StatusInternalServerError, "Error fetching landmarks")
@@ -210,7 +224,9 @@ func (h *LandmarkHandler) ListAdminLandmarks(w http.ResponseWriter, r *http.Requ
 
 	response := map[string]interface{}{
 		"landmarks": fullLandmarks,
-		"total":     len(fullLandmarks),
+		"total":     total,
+		"page":      page,
+		"per_page":  perPage,
 	}
 
 	respondWithJSON(w, http.StatusOK, response)
