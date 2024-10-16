@@ -104,8 +104,8 @@ func main() {
 	requestLogHandler := handlers.NewRequestLogHandler(requestLogService)
 	requestLogger := middleware.NewRequestLogger(requestLogService)
 
-	awsRegion := os.Getenv("AWS_REGION")
-	awsBucket := os.Getenv("AWS_BUCKET")
+	awsRegion := "eu-north-1"
+	awsBucket := "properties-photos"
 	if awsRegion == "" {
 		log.Fatal("AWS Region is nedeed")
 	}
