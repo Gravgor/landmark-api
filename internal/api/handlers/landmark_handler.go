@@ -163,29 +163,7 @@ func (h *LandmarkHandler) ListAdminLandmarks(w http.ResponseWriter, r *http.Requ
 	// Start with a base query
 	query := h.db.Model(&models.Landmark{}).Preload("Images")
 
-	// Add pagination
-	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	pageSize, _ := strconv.Atoi(r.URL.Query().Get("pageSize"))
-	if page == 0 {
-		page = 1
-	}
-	if pageSize == 0 {
-		pageSize = 10 // Default page size
-	}
-	offset := (page - 1) * pageSize
-
-	// Get total count
-	var totalCount int64
-	if err := query.Count(&totalCount).Error; err != nil {
-		log.Printf("Error counting landmarks: %v", err)
-		respondWithError(w, http.StatusInternalServerError, "Error counting landmarks")
-		return
-	}
-
-	// Apply pagination to the query
-	query = query.Offset(offset).Limit(pageSize)
-
-	// Execute the query
+	// Execute the query to get all landmarks
 	var landmarks []models.Landmark
 	if err := query.Find(&landmarks).Error; err != nil {
 		log.Printf("Error fetching landmarks: %v", err)
@@ -196,12 +174,7 @@ func (h *LandmarkHandler) ListAdminLandmarks(w http.ResponseWriter, r *http.Requ
 	// Prepare the response
 	response := map[string]interface{}{
 		"landmarks": landmarks,
-		"pagination": map[string]interface{}{
-			"currentPage": page,
-			"pageSize":    pageSize,
-			"totalCount":  totalCount,
-			"totalPages":  int(math.Ceil(float64(totalCount) / float64(pageSize))),
-		},
+		"total":     len(landmarks),
 	}
 
 	respondWithJSON(w, http.StatusOK, response)
