@@ -123,6 +123,10 @@ func main() {
 	uptimeHandler := handlers.NewUptimeHandler(uptimeService)
 	uptimeMiddleware := handlers.NewUptimeMiddleware(uptimeService)
 
+	categoryRepo := repository.NewCategoryRepository(db)
+	categoryService := services.NewCategoryService(categoryRepo)
+	categoryHandler := handlers.NewCategoryHandler(categoryService)
+
 	router := mux.NewRouter()
 	router.Use(middleware.LoggingMiddleware)
 	router.Use(uptimeMiddleware.Middleware)
@@ -188,6 +192,7 @@ func main() {
 	adminRouter.HandleFunc("/landmarks", landmarkHandler.ListAdminLandmarks).Methods("GET")
 	adminRouter.HandleFunc("/landmarks/{id}", landmarkHandler.AdminEditHandler).Methods("PUT")
 	adminRouter.HandleFunc("/landmarks/{id}", landmarkHandler.AdminDeleteHandler).Methods("DELETE")
+	adminRouter.HandleFunc("/landmarks/category", categoryHandler.ListAdminCategories).Methods("GET")
 
 	go func() {
 		for {
