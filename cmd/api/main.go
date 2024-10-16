@@ -90,10 +90,15 @@ func main() {
 		apiKeyService,
 		jwtSecret,
 	)
+
+	auditLogRepo := repository.NewAuditLogRepository(db)
+	auditLogService := services.NewAuditLogService(auditLogRepo)
+	auditLogHandler := handlers.NewAuditLogHandler(auditLogService)
+
 	landmarkService := services.NewLandmarkService(landmarkRepo)
 
 	authHandler := handlers.NewAuthHandler(authService)
-	landmarkHandler := handlers.NewLandmarkHandler(landmarkService, cacheService, db)
+	landmarkHandler := handlers.NewLandmarkHandler(landmarkService, auditLogService, cacheService, db)
 
 	rateLimiter := middleware.NewRateLimiter(rateLimitConfig)
 	apiUsageService := services.NewAPIUsageService(apiUsageRepo, subscriptionRepo, rateLimitConfig)
@@ -198,6 +203,7 @@ func main() {
 	adminRouter.HandleFunc("/landmarks/{id}", landmarkHandler.AdminDeleteHandler).Methods("DELETE")
 	adminRouter.HandleFunc("/landmarks/category", categoryHandler.ListAdminCategories).Methods("GET")
 	adminRouter.HandleFunc("/landmarks/stats", landmarkStatsHandler.GetLandmarkStats).Methods("GET")
+	adminRouter.HandleFunc("/audit-logs", auditLogHandler.ListAuditLogs).Methods("GET")
 
 	go func() {
 		for {

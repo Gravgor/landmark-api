@@ -21,6 +21,7 @@ import (
 
 type LandmarkHandler struct {
 	landmarkService services.LandmarkService
+	auditService    services.AuditLogService
 	cacheService    services.CacheService
 	db              *gorm.DB
 }
@@ -34,10 +35,11 @@ type QueryParams struct {
 	Filters   map[string]string
 }
 
-func NewLandmarkHandler(landmarkService services.LandmarkService, cs services.CacheService, db *gorm.DB) *LandmarkHandler {
+func NewLandmarkHandler(landmarkService services.LandmarkService, as services.AuditLogService, cs services.CacheService, db *gorm.DB) *LandmarkHandler {
 	return &LandmarkHandler{
 		landmarkService: landmarkService,
 		cacheService:    cs,
+		auditService:    as,
 		db:              db,
 	}
 }
@@ -175,6 +177,12 @@ func (h *LandmarkHandler) ListAdminLandmarks(w http.ResponseWriter, r *http.Requ
 
 	searchTerm := r.URL.Query().Get("search")
 	category := r.URL.Query().Get("category")
+
+	adminID := 0
+	err = h.auditService.CreateAuditLog(r.Context(), adminID, "LISTED", "LANDMARKS", "0", "Listed all landmarks")
+	if err != nil {
+		log.Printf("Failed to create audit log: %v", err)
+	}
 
 	// Fetch landmarks with pagination, search, and category filter
 	landmarks, total, err := h.landmarkService.GetLandmarksWithFilters(ctx, page, perPage, searchTerm, category)
@@ -595,6 +603,12 @@ func (h *LandmarkHandler) CreateLandmark(w http.ResponseWriter, r *http.Request)
 	if err := h.db.Preload("Images").First(&createdLandmark, landmarkData.Landmark.ID).Error; err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to fetch created landmark")
 		return
+	}
+
+	adminID := 0
+	err := h.auditService.CreateAuditLog(r.Context(), adminID, "CREATE", "LANDMARK", createdLandmark.ID.String(), "Created landmark")
+	if err != nil {
+		log.Printf("Failed to create audit log: %v", err)
 	}
 
 	// Prepare the response
