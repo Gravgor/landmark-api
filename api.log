@@ -63,3 +63,13 @@
 {"level":"info","msg":"API started","port":"8080","time":"2024-10-12T19:59:31+02:00"}
 {"ip":"127.0.0.1:50027","level":"info","method":"GET","msg":"Request handled","response_time":2053,"status_code":200,"time":"2024-10-12T19:59:36+02:00","url":"/subscription/manage/get-billing"}
 {"ip":"127.0.0.1:50262","level":"info","method":"GET","msg":"Request handled","response_time":1695,"status_code":200,"time":"2024-10-12T20:03:28+02:00","url":"/subscription/manage/get-billing"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-16T19:47:57+02:00"}
+{"ip":"127.0.0.1:59032","level":"info","method":"GET","msg":"Request handled","response_time":5847,"status_code":500,"time":"2024-10-16T19:49:13+02:00","url":"/api/v1/landmarks"}
+{"ip":"127.0.0.1:59095","level":"info","method":"GET","msg":"Request handled","response_time":4252,"status_code":200,"time":"2024-10-16T19:50:42+02:00","url":"/api/v1/landmarks/country/Poland"}
+{"ip":"127.0.0.1:59105","level":"info","method":"GET","msg":"Request handled","response_time":4588,"status_code":200,"time":"2024-10-16T19:50:59+02:00","url":"/api/v1/landmarks/country/Japan"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-16T19:52:03+02:00"}
+{"ip":"127.0.0.1:59179","level":"info","method":"GET","msg":"Request handled","response_time":3757,"status_code":200,"time":"2024-10-16T19:52:11+02:00","url":"/api/v1/landmarks/country/Japan"}
+{"ip":"127.0.0.1:59203","level":"info","method":"GET","msg":"Request handled","response_time":12892,"status_code":200,"time":"2024-10-16T19:52:55+02:00","url":"/api/v1/landmarks"}
+{"ip":"127.0.0.1:59274","level":"info","method":"GET","msg":"Request handled","response_time":1906,"status_code":200,"time":"2024-10-16T19:53:58+02:00","url":"/api/v1/landmarks/country/Japan"}
+{"ip":"127.0.0.1:59382","level":"info","method":"GET","msg":"Request handled","response_time":4298,"status_code":200,"time":"2024-10-16T19:56:18+02:00","url":"/api/v1/landmarks/name/Historii"}
+{"ip":"127.0.0.1:59405","level":"info","method":"GET","msg":"Request handled","response_time":7516,"status_code":200,"time":"2024-10-16T19:57:00+02:00","url":"/api/v1/landmarks/category/Museum"}

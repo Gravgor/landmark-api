@@ -143,12 +143,13 @@ func (h *LandmarkHandler) ListLandmarks(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	query := h.db.Model(&models.Landmark{}).Preload("images")
+	query := h.db.Model(&models.Landmark{}).Preload("Images")
 	query = applyFilters(query, queryParams.Filters)
 	query = applySorting(query, queryParams.SortBy, queryParams.SortOrder)
 
 	var landmarks []models.Landmark
 	if err := query.Offset(queryParams.Offset).Limit(queryParams.Limit).Find(&landmarks).Error; err != nil {
+		fmt.Print(err)
 		respondWithError(w, http.StatusInternalServerError, "Error fetching landmarks")
 		return
 	}
@@ -278,7 +279,7 @@ func (h *LandmarkHandler) ListLandmarksByCountry(w http.ResponseWriter, r *http.
 		}
 	}
 
-	query := h.db.Model(&models.Landmark{}).Where("country = ?", country)
+	query := h.db.Model(&models.Landmark{}).Where("country = ?", country).Preload("Images")
 	query = applyFilters(query, queryParams.Filters)
 	query = applySorting(query, queryParams.SortBy, queryParams.SortOrder)
 
@@ -343,7 +344,7 @@ func (h *LandmarkHandler) ListLandmarkByCategory(w http.ResponseWriter, r *http.
 	}
 
 	// Cache miss or error - fetch from database
-	query := h.db.Model(&models.Landmark{}).Where("category = ?", category).Preload("images")
+	query := h.db.Model(&models.Landmark{}).Where("category = ?", category).Preload("Images")
 	query = applyFilters(query, queryParams.Filters)
 	query = applySorting(query, queryParams.SortBy, queryParams.SortOrder)
 
@@ -500,7 +501,7 @@ func (h *LandmarkHandler) ListLandmarksByName(w http.ResponseWriter, r *http.Req
 	}
 
 	// Build the base query
-	query := h.db.Model(&models.Landmark{}).Where("name ILIKE ?", "%"+name+"%").Preload("images")
+	query := h.db.Model(&models.Landmark{}).Where("name ILIKE ?", "%"+name+"%").Preload("Images")
 
 	// Apply additional filters and sorting
 	query = applyFilters(query, queryParams.Filters)
