@@ -127,6 +127,10 @@ func main() {
 	categoryService := services.NewCategoryService(categoryRepo)
 	categoryHandler := handlers.NewCategoryHandler(categoryService)
 
+	landmarkStatsRepo := repository.NewLandmarkStatsRepository(db)
+	landmarkStatsService := services.NewLandmarkStatsService(landmarkStatsRepo)
+	landmarkStatsHandler := handlers.NewLandmarkStatsHandler(landmarkStatsService)
+
 	router := mux.NewRouter()
 	router.Use(middleware.LoggingMiddleware)
 	router.Use(uptimeMiddleware.Middleware)
@@ -193,6 +197,7 @@ func main() {
 	adminRouter.HandleFunc("/landmarks/{id}", landmarkHandler.AdminEditHandler).Methods("PUT")
 	adminRouter.HandleFunc("/landmarks/{id}", landmarkHandler.AdminDeleteHandler).Methods("DELETE")
 	adminRouter.HandleFunc("/landmarks/category", categoryHandler.ListAdminCategories).Methods("GET")
+	adminRouter.HandleFunc("/landmarks/stats", landmarkStatsHandler.GetLandmarkStats).Methods("GET")
 
 	go func() {
 		for {
