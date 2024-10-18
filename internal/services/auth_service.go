@@ -1,15 +1,14 @@
 package services
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"landmark-api/internal/models"
 	"landmark-api/internal/repository"
+	"log"
 	"math/rand"
 	"os"
-	"text/template"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -376,45 +375,14 @@ func generateRandomPassword(length int) string {
 	return string(password)
 }
 
-type EmailData struct {
-	Email    string
-	Password string
-}
-
 func (s *authService) sendPasswordEmail(email, password string) error {
-	from := mail.NewEmail("Landmark API", "noreply@yourdomain.com")
-	subject := "Welcome to Landmark API family! Let's start!"
+	from := mail.NewEmail("Landmark API", "noreply@landmark-api.com")
+	subject := "Welcome to Landmark API Family!"
 	to := mail.NewEmail("", email)
+	log.Println(email)
 
-	// Parse the email template
-	tmpl, err := template.New("email").Parse(emailTemplate)
-	if err != nil {
-		return err
-	}
-
-	// Execute the template with the data
-	var body bytes.Buffer
-	if err := tmpl.Execute(&body, EmailData{Email: email, Password: password}); err != nil {
-		return err
-	}
-
-	message := mail.NewSingleEmail(from, subject, to, "", body.String())
-	client := sendgrid.NewSendClient(os.Getenv("SENDGRID_API_KEY"))
-	response, err := client.Send(message)
-	if err != nil {
-		return err
-	}
-
-	if response.StatusCode >= 400 {
-		return fmt.Errorf("error sending email: %v", response.Body)
-	}
-
-	return nil
-}
-
-const emailTemplate = `
-<!DOCTYPE html>
-<html lang="en" style="background-image: linear-gradient(to right, #4338ca, #312e81); color: #ffffff; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';">
+	htmlContent := fmt.Sprintf(`
+		<html lang="en" style="background-image: linear-gradient(to right, #4338ca, #312e81); color: #ffffff; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -425,13 +393,31 @@ const emailTemplate = `
             <h1 style="font-size: 1.875rem; line-height: 2.25rem; font-weight: 700; margin-bottom: 1.5rem;">Welcome to Landmark API!</h1>
             <p style="margin-bottom: 1rem;">Your account has been created successfully. Here are your login details:</p>
             <div style="background-color: #312e81; padding: 1rem; border-radius: 0.375rem; margin-bottom: 1.5rem;">
-                <p style="margin-bottom: 0.5rem;"><strong>Email:</strong> {{.Email}}</p>
-                <p style="margin-bottom: 0;"><strong>Temporary Password:</strong> {{.Password}}</p>
+                <p style="margin-bottom: 0.5rem;"><strong>Email:</strong> %s</p>
+                <p style="margin-bottom: 0;"><strong>Temporary Password:</strong> %s</p>
             </div>
             <p style="margin-bottom: 1.5rem;">Please log in and change your password as soon as possible.</p>
-            <a href="https://your-app-url.com/login" style="background-color: #2563eb; color: #ffffff; font-weight: 700; padding: 0.75rem 1.5rem; border-radius: 0.5rem; display: inline-block; text-decoration: none; transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 300ms;">Login Now</a>
+            <a href="https://landmark-api.com/auth?login=true" style="background-color: #2563eb; color: #ffffff; font-weight: 700; padding: 0.75rem 1.5rem; border-radius: 0.5rem; display: inline-block; text-decoration: none; transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 300ms;">Login Now</a>
         </div>
     </div>
 </body>
 </html>
-`
+	`, email, password)
+
+	message := mail.NewSingleEmail(from, subject, to, "", htmlContent)
+	client := sendgrid.NewSendClient(os.Getenv("SENDGRID_API_KEY"))
+	response, err := client.Send(message)
+	if err != nil {
+		log.Println(err)
+	} else {
+		fmt.Println(response.StatusCode)
+		fmt.Println(response.Body)
+		fmt.Println(response.Headers)
+	}
+
+	if response.StatusCode >= 400 {
+		return fmt.Errorf("error sending email: %v", response.Body)
+	}
+
+	return nil
+}
