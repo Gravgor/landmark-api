@@ -171,6 +171,7 @@ func main() {
 	userRouter.HandleFunc("/me", authHandler.CheckUser).Methods("GET")
 	userRouter.HandleFunc("/usage", apiUsageHandler.GetCurrentUsage).Methods("GET")
 	userRouter.HandleFunc("/requests/logs", requestLogHandler.GetUserLogs).Methods("GET")
+	userRouter.HandleFunc("/update", authHandler.UpdateUser).Methods("PUT")
 
 	subscriptionRouter := router.PathPrefix("/subscription").Subrouter()
 	subscriptionRouter.HandleFunc("/create-checkout", stripeHandler.HandleCreateCheckOut).Methods("POST")

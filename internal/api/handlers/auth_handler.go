@@ -230,6 +230,59 @@ func (h *AuthHandler) CheckUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
+// updateUserRequest represents the structure of a user update request
+type updateUserRequest struct {
+	Name     string `json:"name,omitempty"`
+	Password string `json:"password,omitempty"`
+}
+
+// updateUserResponse represents the structure of a user update response
+type updateUserResponse struct {
+	Message string `json:"message"`
+	Error   string `json:"error,omitempty"`
+}
+
+// UpdateUser godoc
+// @Summary Update user information
+// @Description Update user's name and/or password
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param update body updateUserRequest true "User update details"
+// @Success 200 {object} updateUserResponse
+// @Failure 400 {string} string "Invalid request body"
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 500 {string} string "Internal server error"
+// @Router /auth/update [put]
+func (h *AuthHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req updateUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	user, ok := services.UserFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	err := h.authService.UpdateUser(r.Context(), user.ID, req.Name, req.Password)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	resp := updateUserResponse{Message: "User updated successfully"}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
 // AuthMiddleware verifies the JWT token
 // @Description Middleware to verify JWT token and add user and subscription to context
 // @Param next http.HandlerFunc

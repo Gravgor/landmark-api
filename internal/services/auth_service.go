@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"landmark-api/internal/models"
 	"landmark-api/internal/repository"
+	"log"
 	"math/rand"
 	"os"
 	"time"
@@ -36,6 +37,7 @@ type AuthService interface {
 	RegisterSub(ctx context.Context, email, password, name string) (*models.User, error)
 	RegisterWithEmail(ctx context.Context, email string) (*models.User, error)
 	Login(ctx context.Context, email, password string) (string, error)
+	UpdateUser(ctx context.Context, userID uuid.UUID, name, password string) error
 	VerifyToken(token string) (*models.User, *models.Subscription, error)
 	VerifyTokenAdmin(token string) (*models.User, *models.Subscription, error)
 	GetAPIKey(ctx context.Context, userID uuid.UUID) (*models.APIKey, error)
@@ -245,6 +247,28 @@ func (s *authService) GetCurrentSubscription(ctx context.Context, userID uuid.UU
 	return subscription, nil
 }
 
+func (s *authService) UpdateUser(ctx context.Context, userID uuid.UUID, name, password string) error {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	if name != "" {
+		user.Name = name
+	}
+
+	if password != "" {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			return err
+		}
+
+		user.PasswordHash = string(hashedPassword)
+	}
+
+	return s.userRepo.Update(ctx, user)
+}
+
 func (s *authService) VerifyToken(tokenString string) (*models.User, *models.Subscription, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -355,6 +379,7 @@ func (s *authService) sendPasswordEmail(email, password string) error {
 	from := mail.NewEmail("Landmark API", "noreply@landmark-api.com")
 	subject := "Your New Account Password"
 	to := mail.NewEmail("", email)
+	log.Println(email)
 
 	// Create HTML content that matches your page design
 	htmlContent := fmt.Sprintf(`
@@ -376,7 +401,11 @@ func (s *authService) sendPasswordEmail(email, password string) error {
 	client := sendgrid.NewSendClient(os.Getenv("SENDGRID_API_KEY"))
 	response, err := client.Send(message)
 	if err != nil {
-		return err
+		log.Println(err)
+	} else {
+		fmt.Println(response.StatusCode)
+		fmt.Println(response.Body)
+		fmt.Println(response.Headers)
 	}
 
 	if response.StatusCode >= 400 {
