@@ -382,11 +382,7 @@ func (s *authService) sendPasswordEmail(email, password string) error {
 	log.Println(email)
 
 	htmlContent := fmt.Sprintf(`
-		<html lang="en" style="background-image: linear-gradient(to right, #4338ca, #312e81); color: #ffffff; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
+<html>
 <body style="background-image: linear-gradient(to right, #4338ca, #312e81); color: #ffffff; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';">
     <div style="max-width: 42rem; margin-left: auto; margin-right: auto; padding: 2rem;">
         <div style="background-color: #3730a3; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);">
