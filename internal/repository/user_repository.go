@@ -82,6 +82,7 @@ func (r *userRepository) Update(ctx context.Context, user *models.User) error {
 	result := r.db.WithContext(ctx).Model(user).Updates(map[string]interface{}{
 		"email":         user.Email,
 		"password_hash": user.PasswordHash,
+		"on_boarding":   false,
 		"updated_at":    user.UpdatedAt,
 	})
 
