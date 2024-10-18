@@ -63,6 +63,7 @@ type checkResponse struct {
 	Name        string `json:"name"`
 	Email       string `json:"email"`
 	APIKey      string `json:"apiKey"`
+	OnBoarding  bool   `json:"on_boarding"`
 	PlanType    string `json:"planType"`
 	ApiCalls    uint   `json:"apiCalls"`
 	ApiLimit    uint   `json:"apiLimit"`
@@ -223,6 +224,7 @@ func (h *AuthHandler) CheckUser(w http.ResponseWriter, r *http.Request) {
 	resp.Email = user.Email
 	resp.PlanType = string(subscription.PlanType)
 	resp.AccessToken = ""
+	resp.OnBoarding = user.OnBoarding
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
