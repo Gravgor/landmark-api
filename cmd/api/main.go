@@ -143,6 +143,7 @@ func main() {
 	// Public routes
 	router.HandleFunc("/auth/register", authHandler.Register).Methods("POST")
 	router.HandleFunc("/auth/login", authHandler.Login).Methods("POST")
+	router.HandleFunc("/auth/register-email", authHandler.RegisterWithEmail).Methods("POST")
 	router.HandleFunc("/health", controllers.HealthCheckHandler(db)).Methods("GET")
 	router.HandleFunc("/swagger", httpSwagger.WrapHandler).Methods("GET")
 	router.HandleFunc("/uptime", uptimeHandler.ServeHTTP).Methods("GET")

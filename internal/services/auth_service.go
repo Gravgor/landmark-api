@@ -3,12 +3,17 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"landmark-api/internal/models"
 	"landmark-api/internal/repository"
+	"math/rand"
+	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
+	"github.com/sendgrid/sendgrid-go"
+	"github.com/sendgrid/sendgrid-go/helpers/mail"
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/customer"
 	"golang.org/x/crypto/bcrypt"
@@ -29,6 +34,7 @@ var (
 type AuthService interface {
 	Register(ctx context.Context, email, password, name string) (*models.User, error)
 	RegisterSub(ctx context.Context, email, password, name string) (*models.User, error)
+	RegisterWithEmail(ctx context.Context, email string) (*models.User, error)
 	Login(ctx context.Context, email, password string) (string, error)
 	VerifyToken(token string) (*models.User, *models.Subscription, error)
 	VerifyTokenAdmin(token string) (*models.User, *models.Subscription, error)
@@ -126,6 +132,57 @@ func (s *authService) RegisterSub(ctx context.Context, email, password, name str
 	if err := s.userRepo.Create(ctx, user); err != nil {
 		return nil, err
 	}
+	return user, nil
+}
+
+func (s *authService) RegisterWithEmail(ctx context.Context, email string) (*models.User, error) {
+	// Generate a random password
+	password := generateRandomPassword(12)
+
+	// Hash the password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	user := &models.User{
+		ID:           uuid.New(),
+		Email:        email,
+		Name:         "",
+		PasswordHash: string(hashedPassword),
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	}
+
+	if err := s.userRepo.Create(ctx, user); err != nil {
+		return nil, err
+	}
+
+	// Assign API key
+	_, err = s.apiKeyService.AssignAPIKeyToUser(ctx, user.ID)
+	if err != nil {
+		return user, err
+	}
+
+	// Create subscription
+	subscription := &models.Subscription{
+		ID:        uuid.New(),
+		UserID:    user.ID,
+		PlanType:  models.FreePlan,
+		StartDate: time.Now(),
+		Status:    "active",
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	if err := s.subscriptionRepo.Create(ctx, subscription); err != nil {
+		return user, err
+	}
+
+	if err := s.sendPasswordEmail(user.Email, password); err != nil {
+		return user, nil
+	}
+
 	return user, nil
 }
 
@@ -281,4 +338,49 @@ func UserFromContext(ctx context.Context) (*models.User, bool) {
 func SubscriptionFromContext(ctx context.Context) (*models.Subscription, bool) {
 	subscription, ok := ctx.Value(SubscriptionContextKey).(*models.Subscription)
 	return subscription, ok
+}
+
+func generateRandomPassword(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+"
+	seededRand := rand.New(rand.NewSource(time.Now().UnixNano()))
+	password := make([]byte, length)
+	for i := range password {
+		password[i] = charset[seededRand.Intn(len(charset))]
+	}
+	return string(password)
+}
+
+func (s *authService) sendPasswordEmail(email, password string) error {
+	from := mail.NewEmail("Landmark API", "noreply@landmark-api.com")
+	subject := "Your New Account Password"
+	to := mail.NewEmail("", email)
+
+	// Create HTML content that matches your page design
+	htmlContent := fmt.Sprintf(`
+		<html>
+		<body style="font-family: Arial, sans-serif; background-color: #4338ca; color: white; padding: 20px;">
+			<div style="background-color: #1e1b4b; padding: 20px; border-radius: 10px;">
+				<h1 style="color: white;">Welcome to Landmark API!</h1>
+				<p>Your account has been created successfully. Here are your login details:</p>
+				<p><strong>Email:</strong> %s</p>
+				<p><strong>Temporary Password:</strong> %s</p>
+				<p>Please log in and change your password as soon as possible.</p>
+				<a href="https://www.landmark-api.com/auth?login=true" style="background-color: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login Now</a>
+			</div>
+		</body>
+		</html>
+	`, email, password)
+
+	message := mail.NewSingleEmail(from, subject, to, "", htmlContent)
+	client := sendgrid.NewSendClient(os.Getenv("SENDGRID_API_KEY"))
+	response, err := client.Send(message)
+	if err != nil {
+		return err
+	}
+
+	if response.StatusCode >= 400 {
+		return fmt.Errorf("error sending email: %v", response.Body)
+	}
+
+	return nil
 }

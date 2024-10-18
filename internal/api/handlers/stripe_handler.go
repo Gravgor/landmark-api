@@ -111,8 +111,8 @@ func (h *StripeHandler) createStripeCheckoutSession(customerID, priceID string) 
 			},
 		},
 		Mode:       stripe.String(string(stripe.CheckoutSessionModeSubscription)),
-		SuccessURL: stripe.String("https://landmark-api-frontend-v2-production.up.railway.app/success"),
-		CancelURL:  stripe.String("https://landmark-api-frontend-v2-production.up.railway.app/cancel"),
+		SuccessURL: stripe.String("https://www.landmark-api.com/success"),
+		CancelURL:  stripe.String("https://www.landmark-api.com/cancel"),
 	}
 
 	s, err := session.New(params)
