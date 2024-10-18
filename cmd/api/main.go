@@ -220,7 +220,7 @@ func main() {
 	}()
 
 	corsMiddleware := cors.New(cors.Options{
-		AllowedOrigins: []string{"https://landmark-api.com"},
+		AllowedOrigins: []string{"https://landmark-api.com", "http://localhost:3000"},
 		AllowedMethods: []string{
 			http.MethodGet,
 			http.MethodPost,

@@ -73,3 +73,5 @@
 {"ip":"127.0.0.1:59274","level":"info","method":"GET","msg":"Request handled","response_time":1906,"status_code":200,"time":"2024-10-16T19:53:58+02:00","url":"/api/v1/landmarks/country/Japan"}
 {"ip":"127.0.0.1:59382","level":"info","method":"GET","msg":"Request handled","response_time":4298,"status_code":200,"time":"2024-10-16T19:56:18+02:00","url":"/api/v1/landmarks/name/Historii"}
 {"ip":"127.0.0.1:59405","level":"info","method":"GET","msg":"Request handled","response_time":7516,"status_code":200,"time":"2024-10-16T19:57:00+02:00","url":"/api/v1/landmarks/category/Museum"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-18T18:16:02+02:00"}
+{"ip":"127.0.0.1:62464","level":"info","method":"POST","msg":"Request handled","response_time":3362,"status_code":200,"time":"2024-10-18T18:16:17+02:00","url":"/auth/register-email"}
