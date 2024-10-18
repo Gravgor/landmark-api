@@ -81,6 +81,7 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*models.
 func (r *userRepository) Update(ctx context.Context, user *models.User) error {
 	result := r.db.WithContext(ctx).Model(user).Updates(map[string]interface{}{
 		"email":         user.Email,
+		"name":          user.Name,
 		"password_hash": user.PasswordHash,
 		"on_boarding":   false,
 		"updated_at":    user.UpdatedAt,
