@@ -1,14 +1,15 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"landmark-api/internal/models"
 	"landmark-api/internal/repository"
-	"log"
 	"math/rand"
 	"os"
+	"text/template"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -375,37 +376,33 @@ func generateRandomPassword(length int) string {
 	return string(password)
 }
 
+type EmailData struct {
+	Email    string
+	Password string
+}
+
 func (s *authService) sendPasswordEmail(email, password string) error {
-	from := mail.NewEmail("Landmark API", "noreply@landmark-api.com")
-	subject := "Your New Account Password"
+	from := mail.NewEmail("Landmark API", "noreply@yourdomain.com")
+	subject := "Welcome to Landmark API family! Let's start!"
 	to := mail.NewEmail("", email)
-	log.Println(email)
 
-	// Create HTML content that matches your page design
-	htmlContent := fmt.Sprintf(`
-		<html>
-		<body style="font-family: Arial, sans-serif; background-color: #4338ca; color: white; padding: 20px;">
-			<div style="background-color: #1e1b4b; padding: 20px; border-radius: 10px;">
-				<h1 style="color: white;">Welcome to Landmark API!</h1>
-				<p>Your account has been created successfully. Here are your login details:</p>
-				<p><strong>Email:</strong> %s</p>
-				<p><strong>Temporary Password:</strong> %s</p>
-				<p>Please log in and change your password as soon as possible.</p>
-				<a href="https://www.landmark-api.com/auth?login=true" style="background-color: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login Now</a>
-			</div>
-		</body>
-		</html>
-	`, email, password)
+	// Parse the email template
+	tmpl, err := template.New("email").Parse(emailTemplate)
+	if err != nil {
+		return err
+	}
 
-	message := mail.NewSingleEmail(from, subject, to, "", htmlContent)
+	// Execute the template with the data
+	var body bytes.Buffer
+	if err := tmpl.Execute(&body, EmailData{Email: email, Password: password}); err != nil {
+		return err
+	}
+
+	message := mail.NewSingleEmail(from, subject, to, "", body.String())
 	client := sendgrid.NewSendClient(os.Getenv("SENDGRID_API_KEY"))
 	response, err := client.Send(message)
 	if err != nil {
-		log.Println(err)
-	} else {
-		fmt.Println(response.StatusCode)
-		fmt.Println(response.Body)
-		fmt.Println(response.Headers)
+		return err
 	}
 
 	if response.StatusCode >= 400 {
@@ -414,3 +411,27 @@ func (s *authService) sendPasswordEmail(email, password string) error {
 
 	return nil
 }
+
+const emailTemplate = `
+<!DOCTYPE html>
+<html lang="en" style="background-image: linear-gradient(to right, #4338ca, #312e81); color: #ffffff; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="background-image: linear-gradient(to right, #4338ca, #312e81); color: #ffffff; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';">
+    <div style="max-width: 42rem; margin-left: auto; margin-right: auto; padding: 2rem;">
+        <div style="background-color: #3730a3; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);">
+            <h1 style="font-size: 1.875rem; line-height: 2.25rem; font-weight: 700; margin-bottom: 1.5rem;">Welcome to Landmark API!</h1>
+            <p style="margin-bottom: 1rem;">Your account has been created successfully. Here are your login details:</p>
+            <div style="background-color: #312e81; padding: 1rem; border-radius: 0.375rem; margin-bottom: 1.5rem;">
+                <p style="margin-bottom: 0.5rem;"><strong>Email:</strong> {{.Email}}</p>
+                <p style="margin-bottom: 0;"><strong>Temporary Password:</strong> {{.Password}}</p>
+            </div>
+            <p style="margin-bottom: 1.5rem;">Please log in and change your password as soon as possible.</p>
+            <a href="https://your-app-url.com/login" style="background-color: #2563eb; color: #ffffff; font-weight: 700; padding: 0.75rem 1.5rem; border-radius: 0.5rem; display: inline-block; text-decoration: none; transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 300ms;">Login Now</a>
+        </div>
+    </div>
+</body>
+</html>
+`
