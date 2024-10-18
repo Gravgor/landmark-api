@@ -16,6 +16,7 @@ type User struct {
 	APIKeys         []APIKey       `gorm:"foreignkey:UserID" json:"api_keys,omitempty"` // Add this line
 	StripeID        string         `gorm:"type:varchar(255);not null;default:''" json:"stripe_id"`
 	HasAccess       bool           `gorm:"type:boolean;not null;default:false" json:"has_access"`
+	OnBoarding      bool           `gorm:"type:boolean;not null;default:false" json:"on_boarding"`
 	AccessGrantedAt time.Time      `gorm:"default:null" json:"access_granted_at"`
 	AccessRevokedAt time.Time      `gorm:"default:null" json:"access_revoked_at"`
 	CreatedAt       time.Time      `gorm:"not null;default:CURRENT_TIMESTAMP" json:"created_at"`

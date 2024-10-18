@@ -149,6 +149,7 @@ func (s *authService) RegisterWithEmail(ctx context.Context, email string) (*mod
 		ID:           uuid.New(),
 		Email:        email,
 		Name:         "",
+		OnBoarding:   true,
 		PasswordHash: string(hashedPassword),
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
