@@ -26,7 +26,7 @@ type Landmark struct {
 type LandmarkImage struct {
 	ID         uuid.UUID `gorm:"type:uuid;primaryKey" json:"-"`
 	LandmarkID uuid.UUID `gorm:"type:uuid;not null" json:"-"`
-	ImageURL   string    `gorm:"type:varchar(255);not null" json:"image_url"`
+	ImageURL   string    `gorm:"type:varchar(500);not null" json:"image_url"`
 	CreatedAt  time.Time `gorm:"not null;default:CURRENT_TIMESTAMP" json:"created_at"`
 	UpdatedAt  time.Time `gorm:"not null;default:CURRENT_TIMESTAMP" json:"updated_at"`
 }
