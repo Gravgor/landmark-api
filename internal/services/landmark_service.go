@@ -12,7 +12,9 @@ import (
 type LandmarkService interface {
 	GetLandmark(ctx context.Context, id uuid.UUID) (*models.Landmark, error)
 	ListLandmarks(ctx context.Context, page, pageSize int) ([]models.Landmark, error)
+	GetLandmarksWithFilters(ctx context.Context, page, perPage int, searchTerm, category string) ([]models.Landmark, int64, error)
 	GetLandmarkDetails(ctx context.Context, id uuid.UUID, userSubscription models.SubscriptionPlan) (*models.LandmarkDetail, error)
+	GetLandmarkAdminDetails(ctx context.Context, id uuid.UUID) (*models.LandmarkDetail, error)
 	GetLandmarksByCountry(ctx context.Context, country string) ([]models.Landmark, error)
 	GetLandmarksByName(ctx context.Context, name string) ([]models.Landmark, error)
 }
@@ -29,6 +31,10 @@ func (s *landmarkService) GetLandmark(ctx context.Context, id uuid.UUID) (*model
 	return s.landmarkRepo.GetByID(ctx, id)
 }
 
+func (s *landmarkService) GetLandmarksWithFilters(ctx context.Context, page, perPage int, searchTerm, category string) ([]models.Landmark, int64, error) {
+	return s.landmarkRepo.ListWithFilters(ctx, page, perPage, searchTerm, category)
+}
+
 func (s *landmarkService) ListLandmarks(ctx context.Context, page, pageSize int) ([]models.Landmark, error) {
 	offset := (page - 1) * pageSize
 	return s.landmarkRepo.List(ctx, pageSize, offset)
@@ -38,6 +44,10 @@ func (s *landmarkService) GetLandmarkDetails(ctx context.Context, id uuid.UUID, 
 	if userSubscription == models.FreePlan {
 		return nil, errors.ErrInsufficientSubscription
 	}
+	return s.landmarkRepo.GetDetails(ctx, id)
+}
+
+func (s *landmarkService) GetLandmarkAdminDetails(ctx context.Context, id uuid.UUID) (*models.LandmarkDetail, error) {
 	return s.landmarkRepo.GetDetails(ctx, id)
 }
 

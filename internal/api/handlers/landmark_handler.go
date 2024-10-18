@@ -21,6 +21,7 @@ import (
 
 type LandmarkHandler struct {
 	landmarkService services.LandmarkService
+	auditService    services.AuditLogService
 	cacheService    services.CacheService
 	db              *gorm.DB
 }
@@ -34,10 +35,11 @@ type QueryParams struct {
 	Filters   map[string]string
 }
 
-func NewLandmarkHandler(landmarkService services.LandmarkService, cs services.CacheService, db *gorm.DB) *LandmarkHandler {
+func NewLandmarkHandler(landmarkService services.LandmarkService, as services.AuditLogService, cs services.CacheService, db *gorm.DB) *LandmarkHandler {
 	return &LandmarkHandler{
 		landmarkService: landmarkService,
 		cacheService:    cs,
+		auditService:    as,
 		db:              db,
 	}
 }
@@ -141,12 +143,13 @@ func (h *LandmarkHandler) ListLandmarks(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	query := h.db.Model(&models.Landmark{})
+	query := h.db.Model(&models.Landmark{}).Preload("Images")
 	query = applyFilters(query, queryParams.Filters)
 	query = applySorting(query, queryParams.SortBy, queryParams.SortOrder)
 
 	var landmarks []models.Landmark
 	if err := query.Offset(queryParams.Offset).Limit(queryParams.Limit).Find(&landmarks).Error; err != nil {
+		fmt.Print(err)
 		respondWithError(w, http.StatusInternalServerError, "Error fetching landmarks")
 		return
 	}
@@ -156,6 +159,79 @@ func (h *LandmarkHandler) ListLandmarks(w http.ResponseWriter, r *http.Request) 
 	// Cache the response
 	h.cacheService.Set(ctx, cacheKey, response, 15*time.Minute)
 	w.Header().Set("X-Cache", "MISS")
+	respondWithJSON(w, http.StatusOK, response)
+}
+
+func (h *LandmarkHandler) ListAdminLandmarks(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Parse query parameters
+	page, err := strconv.Atoi(r.URL.Query().Get("page"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	perPage, err := strconv.Atoi(r.URL.Query().Get("per_page"))
+	if err != nil || perPage < 1 {
+		perPage = 10 // Default to 10 items per page
+	}
+
+	searchTerm := r.URL.Query().Get("search")
+	category := r.URL.Query().Get("category")
+
+	// Fetch landmarks with pagination, search, and category filter
+	landmarks, total, err := h.landmarkService.GetLandmarksWithFilters(ctx, page, perPage, searchTerm, category)
+	if err != nil {
+		log.Printf("Error fetching landmarks: %v", err)
+		respondWithError(w, http.StatusInternalServerError, "Error fetching landmarks")
+		return
+	}
+
+	// Prepare the response with full landmark information
+	var fullLandmarks []map[string]interface{}
+	for _, landmark := range landmarks {
+		// Fetch admin details for each landmark
+		details, err := h.landmarkService.GetLandmarkAdminDetails(ctx, landmark.ID)
+		if err != nil {
+			log.Printf("Error fetching details for landmark %s: %v", landmark.ID, err)
+			// Decide whether to skip this landmark or continue with partial data
+			continue
+		}
+
+		fullLandmark := map[string]interface{}{
+			"id":          landmark.ID,
+			"name":        landmark.Name,
+			"description": landmark.Description,
+			"latitude":    landmark.Latitude,
+			"longitude":   landmark.Longitude,
+			"country":     landmark.Country,
+			"city":        landmark.City,
+			"category":    landmark.Category,
+			"image_url":   landmark.ImageUrl,
+			"images":      landmark.Images,
+			"created_at":  landmark.CreatedAt,
+			"updated_at":  landmark.UpdatedAt,
+		}
+
+		// Add admin details
+		if details != nil {
+			fullLandmark["opening_hours"] = details.OpeningHours
+			fullLandmark["ticket_prices"] = details.TicketPrices
+			fullLandmark["historical_significance"] = details.HistoricalSignificance
+			fullLandmark["visitor_tips"] = details.VisitorTips
+			fullLandmark["accessibility_info"] = details.AccessibilityInfo
+		}
+
+		fullLandmarks = append(fullLandmarks, fullLandmark)
+	}
+
+	response := map[string]interface{}{
+		"landmarks": fullLandmarks,
+		"total":     total,
+		"page":      page,
+		"per_page":  perPage,
+	}
+
 	respondWithJSON(w, http.StatusOK, response)
 }
 
@@ -203,7 +279,7 @@ func (h *LandmarkHandler) ListLandmarksByCountry(w http.ResponseWriter, r *http.
 		}
 	}
 
-	query := h.db.Model(&models.Landmark{}).Where("country = ?", country)
+	query := h.db.Model(&models.Landmark{}).Where("country = ?", country).Preload("Images")
 	query = applyFilters(query, queryParams.Filters)
 	query = applySorting(query, queryParams.SortBy, queryParams.SortOrder)
 
@@ -268,7 +344,7 @@ func (h *LandmarkHandler) ListLandmarkByCategory(w http.ResponseWriter, r *http.
 	}
 
 	// Cache miss or error - fetch from database
-	query := h.db.Model(&models.Landmark{}).Where("category = ?", category)
+	query := h.db.Model(&models.Landmark{}).Where("category = ?", category).Preload("Images")
 	query = applyFilters(query, queryParams.Filters)
 	query = applySorting(query, queryParams.SortBy, queryParams.SortOrder)
 
@@ -425,7 +501,7 @@ func (h *LandmarkHandler) ListLandmarksByName(w http.ResponseWriter, r *http.Req
 	}
 
 	// Build the base query
-	query := h.db.Model(&models.Landmark{}).Where("name ILIKE ?", "%"+name+"%")
+	query := h.db.Model(&models.Landmark{}).Where("name ILIKE ?", "%"+name+"%").Preload("Images")
 
 	// Apply additional filters and sorting
 	query = applyFilters(query, queryParams.Filters)
@@ -459,11 +535,11 @@ func (h *LandmarkHandler) ListLandmarksByName(w http.ResponseWriter, r *http.Req
 }
 
 func (h *LandmarkHandler) CreateLandmark(w http.ResponseWriter, r *http.Request) {
-
 	// Parse the request body
 	var landmarkData struct {
 		Landmark       models.Landmark       `json:"landmark"`
 		LandmarkDetail models.LandmarkDetail `json:"landmark_detail"`
+		ImageURLs      []string              `json:"image_urls"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&landmarkData); err != nil {
@@ -481,10 +557,25 @@ func (h *LandmarkHandler) CreateLandmark(w http.ResponseWriter, r *http.Request)
 
 	// Create the Landmark
 	landmarkData.Landmark.ID = uuid.New() // Generate a new UUID for the landmark
+
 	if err := tx.Create(&landmarkData.Landmark).Error; err != nil {
 		tx.Rollback()
 		respondWithError(w, http.StatusInternalServerError, "Failed to create landmark")
 		return
+	}
+
+	// Create LandmarkImage entries
+	for _, url := range landmarkData.ImageURLs {
+		landmarkImage := models.LandmarkImage{
+			ID:         uuid.New(),
+			LandmarkID: landmarkData.Landmark.ID,
+			ImageURL:   url,
+		}
+		if err := tx.Create(&landmarkImage).Error; err != nil {
+			tx.Rollback()
+			respondWithError(w, http.StatusInternalServerError, "Failed to create landmark image")
+			return
+		}
 	}
 
 	// Create the LandmarkDetail
@@ -502,10 +593,164 @@ func (h *LandmarkHandler) CreateLandmark(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Fetch the created landmark with its images
+	var createdLandmark models.Landmark
+	if err := h.db.Preload("Images").First(&createdLandmark, landmarkData.Landmark.ID).Error; err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to fetch created landmark")
+		return
+	}
+
+	adminID := 0
+	err := h.auditService.CreateAuditLog(r.Context(), adminID, "CREATE", "LANDMARK", createdLandmark.ID.String(), "Created landmark")
+	if err != nil {
+		log.Printf("Failed to create audit log: %v", err)
+	}
+
 	// Prepare the response
-	response := h.mergeLandmarkAndDetails(&landmarkData.Landmark, &landmarkData.LandmarkDetail)
+	response := h.mergeLandmarkAndDetails(&createdLandmark, &landmarkData.LandmarkDetail)
 
 	respondWithJSON(w, http.StatusCreated, response)
+}
+
+func (h *LandmarkHandler) AdminEditHandler(w http.ResponseWriter, r *http.Request) {
+	// Extract landmark ID from the URL
+	vars := mux.Vars(r)
+	id, err := uuid.Parse(vars["id"])
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid landmark ID")
+		return
+	}
+
+	// Decode the request body
+	var updateData struct {
+		Landmark struct {
+			Name        string  `json:"name"`
+			Description string  `json:"description"`
+			Latitude    float64 `json:"latitude"`
+			Longitude   float64 `json:"longitude"`
+			Country     string  `json:"country"`
+			City        string  `json:"city"`
+			Category    string  `json:"category"`
+		} `json:"landmark"`
+		LandmarkDetail struct {
+			OpeningHours           string `json:"opening_hours"`
+			TicketPrices           string `json:"ticket_prices"`
+			HistoricalSignificance string `json:"historical_significance"`
+			VisitorTips            string `json:"visitor_tips"`
+			AccessibilityInfo      string `json:"accessibility_info"`
+		} `json:"landmark_detail"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&updateData); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	// Start a database transaction
+	tx := h.db.Begin()
+	if tx.Error != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to start database transaction")
+		return
+	}
+
+	// Update the Landmark
+	if err := tx.Model(&models.Landmark{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"name":        updateData.Landmark.Name,
+		"description": updateData.Landmark.Description,
+		"latitude":    updateData.Landmark.Latitude,
+		"longitude":   updateData.Landmark.Longitude,
+		"country":     updateData.Landmark.Country,
+		"city":        updateData.Landmark.City,
+		"category":    updateData.Landmark.Category,
+	}).Error; err != nil {
+		tx.Rollback()
+		respondWithError(w, http.StatusInternalServerError, "Failed to update landmark")
+		return
+	}
+
+	// Update the LandmarkDetail
+	if err := tx.Model(&models.LandmarkDetail{}).Where("landmark_id = ?", id).Updates(map[string]interface{}{
+		"opening_hours":           updateData.LandmarkDetail.OpeningHours,
+		"ticket_prices":           updateData.LandmarkDetail.TicketPrices,
+		"historical_significance": updateData.LandmarkDetail.HistoricalSignificance,
+		"visitor_tips":            updateData.LandmarkDetail.VisitorTips,
+		"accessibility_info":      updateData.LandmarkDetail.AccessibilityInfo,
+	}).Error; err != nil {
+		tx.Rollback()
+		respondWithError(w, http.StatusInternalServerError, "Failed to update landmark details")
+		return
+	}
+
+	// Commit the transaction
+	if err := tx.Commit().Error; err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to commit transaction")
+		return
+	}
+
+	// Fetch the updated landmark with its details
+	var updatedLandmark models.Landmark
+	var updatedDetails models.LandmarkDetail
+
+	if err := h.db.Preload("Images").First(&updatedLandmark, id).Error; err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to fetch updated landmark")
+		return
+	}
+
+	if err := h.db.First(&updatedDetails, "landmark_id = ?", id).Error; err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to fetch updated landmark details")
+		return
+	}
+
+	// Prepare the response
+	response := h.mergeLandmarkAndDetails(&updatedLandmark, &updatedDetails)
+
+	respondWithJSON(w, http.StatusOK, response)
+}
+
+func (h *LandmarkHandler) AdminDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := uuid.Parse(vars["id"])
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid landmark ID")
+		return
+	}
+
+	tx := h.db.Begin()
+	if tx.Error != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to start database transaction")
+		return
+	}
+
+	if err := tx.Where("landmark_id = ?", id).Delete(&models.LandmarkImage{}).Error; err != nil {
+		tx.Rollback()
+		respondWithError(w, http.StatusInternalServerError, "Failed to delete associated images")
+		return
+	}
+
+	if err := tx.Where("landmark_id = ?", id).Delete(&models.LandmarkDetail{}).Error; err != nil {
+		tx.Rollback()
+		respondWithError(w, http.StatusInternalServerError, "Failed to delete landmark details")
+		return
+	}
+
+	if err := tx.Delete(&models.Landmark{}, id).Error; err != nil {
+		tx.Rollback()
+		respondWithError(w, http.StatusInternalServerError, "Failed to delete landmark")
+		return
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to commit transaction")
+		return
+	}
+
+	cacheKey := h.getCacheKey("id", id.String())
+	if err := h.cacheService.Delete(r.Context(), cacheKey); err != nil {
+		log.Printf("Failed to delete cache entry: %v", err)
+	}
+
+	// Respond with a success message
+	respondWithJSON(w, http.StatusOK, map[string]string{"message": "Landmark deleted successfully"})
 }
 
 // Helper functions
@@ -638,7 +883,7 @@ func (h *LandmarkHandler) getLandmarkAndSubscription(ctx context.Context, id uui
 	}
 
 	var landmark models.Landmark
-	if err := h.db.First(&landmark, "id = ?", id).Error; err != nil {
+	if err := h.db.Preload("Images").First(&landmark, "id = ?", id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			respondWithError(w, http.StatusNotFound, "Landmark not found")
 		} else {
@@ -661,16 +906,24 @@ func (h *LandmarkHandler) filterBasicLandmarkInfo(landmark *models.Landmark) map
 		"latitude":    landmark.Latitude,
 		"longitude":   landmark.Longitude,
 		"image_url":   landmark.ImageUrl,
+		"images":      landmark.Images,
 	}
 }
 
 // mergeLandmarkAndDetails combines landmark data with its details based on subscription
 func (h *LandmarkHandler) mergeLandmarkAndDetails(landmark *models.Landmark, details *models.LandmarkDetail) map[string]interface{} {
 	merged := h.filterBasicLandmarkInfo(landmark)
+
+	// Add image information
+	merged["images"] = landmark.Images
+
+	// Fetch weather data
 	weatherData, err := services.FetchWeatherData(landmark.Latitude, landmark.Longitude)
 	if err != nil {
-		fmt.Print("Error with weather")
+		log.Printf("Error fetching weather data: %v", err)
+		weatherData = nil
 	}
+
 	if details != nil {
 		additionalInfo := map[string]interface{}{
 			"opening_hours":           details.OpeningHours,
@@ -681,8 +934,7 @@ func (h *LandmarkHandler) mergeLandmarkAndDetails(landmark *models.Landmark, det
 			"weather_info":            weatherData,
 		}
 
-		// Add weather info for enterprise plan
-
+		// Add additional info based on subscription level
 		for k, v := range additionalInfo {
 			merged[k] = v
 		}

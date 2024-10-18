@@ -39,6 +39,10 @@ type registrationResponse struct {
 	Error string `json:"error,omitempty"`
 }
 
+type emailRegistrationRequest struct {
+	Email string `json:"email"`
+}
+
 // loginRequest represents the structure of a login request
 type loginRequest struct {
 	Email    string `json:"email"`
@@ -90,6 +94,32 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, err := h.authService.Register(r.Context(), req.Email, req.Password, req.Name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	resp := registrationResponse{}
+	resp.User.ID = user.ID.String()
+	resp.User.Email = user.Email
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
+func (h *AuthHandler) RegisterWithEmail(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req emailRegistrationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	user, err := h.authService.RegisterWithEmail(r.Context(), req.Email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -90,10 +90,15 @@ func main() {
 		apiKeyService,
 		jwtSecret,
 	)
+
+	auditLogRepo := repository.NewAuditLogRepository(db)
+	auditLogService := services.NewAuditLogService(auditLogRepo)
+	auditLogHandler := handlers.NewAuditLogHandler(auditLogService)
+
 	landmarkService := services.NewLandmarkService(landmarkRepo)
 
 	authHandler := handlers.NewAuthHandler(authService)
-	landmarkHandler := handlers.NewLandmarkHandler(landmarkService, cacheService, db)
+	landmarkHandler := handlers.NewLandmarkHandler(landmarkService, auditLogService, cacheService, db)
 
 	rateLimiter := middleware.NewRateLimiter(rateLimitConfig)
 	apiUsageService := services.NewAPIUsageService(apiUsageRepo, subscriptionRepo, rateLimitConfig)
@@ -104,12 +109,32 @@ func main() {
 	requestLogHandler := handlers.NewRequestLogHandler(requestLogService)
 	requestLogger := middleware.NewRequestLogger(requestLogService)
 
-	fileUploadHandler := handlers.NewFileUploadHandler()
+	awsRegion := "eu-north-1"
+	awsBucket := "properties-photos"
+	if awsRegion == "" {
+		log.Fatal("AWS Region is nedeed")
+	}
+	if awsBucket == "" {
+		log.Fatal("AWS Bucket is nedeed")
+	}
+
+	fileUploadHandler, err := handlers.NewFileUploadHandler(awsRegion, awsBucket)
+	if err != nil {
+		log.Fatal("Error with file handler")
+	}
 	stripeHandler := handlers.NewStripeHandler(authService, subscriptionRepo, userRepo, apiKeyService)
 
 	uptimeService := handlers.NewUptimeService()
 	uptimeHandler := handlers.NewUptimeHandler(uptimeService)
 	uptimeMiddleware := handlers.NewUptimeMiddleware(uptimeService)
+
+	categoryRepo := repository.NewCategoryRepository(db)
+	categoryService := services.NewCategoryService(categoryRepo)
+	categoryHandler := handlers.NewCategoryHandler(categoryService)
+
+	landmarkStatsRepo := repository.NewLandmarkStatsRepository(db)
+	landmarkStatsService := services.NewLandmarkStatsService(landmarkStatsRepo)
+	landmarkStatsHandler := handlers.NewLandmarkStatsHandler(landmarkStatsService)
 
 	router := mux.NewRouter()
 	router.Use(middleware.LoggingMiddleware)
@@ -118,6 +143,7 @@ func main() {
 	// Public routes
 	router.HandleFunc("/auth/register", authHandler.Register).Methods("POST")
 	router.HandleFunc("/auth/login", authHandler.Login).Methods("POST")
+	router.HandleFunc("/auth/register-email", authHandler.RegisterWithEmail).Methods("POST")
 	router.HandleFunc("/health", controllers.HealthCheckHandler(db)).Methods("GET")
 	router.HandleFunc("/swagger", httpSwagger.WrapHandler).Methods("GET")
 	router.HandleFunc("/uptime", uptimeHandler.ServeHTTP).Methods("GET")
@@ -173,6 +199,12 @@ func main() {
 	adminRouter.Use(middleware.AdminMiddleware(authService))
 	adminRouter.HandleFunc("/landmarks/upload-photo", fileUploadHandler.Upload).Methods("POST")
 	adminRouter.HandleFunc("/landmarks/create", landmarkHandler.CreateLandmark).Methods("POST")
+	adminRouter.HandleFunc("/landmarks", landmarkHandler.ListAdminLandmarks).Methods("GET")
+	adminRouter.HandleFunc("/landmarks/{id}", landmarkHandler.AdminEditHandler).Methods("PUT")
+	adminRouter.HandleFunc("/landmarks/{id}", landmarkHandler.AdminDeleteHandler).Methods("DELETE")
+	adminRouter.HandleFunc("/landmarks/category", categoryHandler.ListAdminCategories).Methods("GET")
+	adminRouter.HandleFunc("/landmarks/stats", landmarkStatsHandler.GetLandmarkStats).Methods("GET")
+	adminRouter.HandleFunc("/audit-logs", auditLogHandler.ListAuditLogs).Methods("GET")
 
 	go func() {
 		for {
