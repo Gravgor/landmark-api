@@ -385,6 +385,94 @@ func (h *LandmarkHandler) ListLandmarkByCategory(w http.ResponseWriter, r *http.
 	respondWithJSON(w, http.StatusOK, response)
 }
 
+// ListLandmarksByCity godoc
+// @Summary List landmarks by city
+// @Description Get a list of landmarks for a specific city
+// @Tags landmarks
+// @Accept json
+// @Produce json
+// @Param city path string true "City name"
+// @Param limit query int false "Number of items to return"
+// @Param offset query int false "Number of items to skip"
+// @Param sort query string false "Sort field and order (e.g., '-name' for descending)"
+// @Param fields query string false "Comma-separated list of fields to include"
+// @Success 200 {object} map[string]interface{}
+// @Failure 403 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/landmarks/city/{city} [get]
+func (h *LandmarkHandler) ListLandmarksByCity(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+	city := vars["city"]
+	queryParams := parseQueryParams(r)
+
+	subscription, ok := services.SubscriptionFromContext(ctx)
+	if !ok {
+		respondWithError(w, http.StatusForbidden, "Subscription not found")
+		return
+	}
+
+	// Generate cache key based on city, query parameters, and subscription type
+	cacheKey := h.getCacheKey("city", city,
+		fmt.Sprintf("limit:%d", queryParams.Limit),
+		fmt.Sprintf("offset:%d", queryParams.Offset),
+		fmt.Sprintf("sort:%s:%s", queryParams.SortBy, queryParams.SortOrder),
+		string(subscription.PlanType))
+
+	// Try to get from cache first
+	if cachedData, err := h.cacheService.Get(ctx, cacheKey); err == nil {
+		var response interface{}
+		if err := json.Unmarshal([]byte(cachedData), &response); err == nil {
+			w.Header().Set("X-Cache", "HIT")
+			respondWithJSON(w, http.StatusOK, response)
+			return
+		}
+		// If unmarshal fails, log the error but continue to fetch from database
+		log.Printf("Error unmarshaling cached data: %v", err)
+	}
+
+	// Cache miss or error - fetch from database
+	query := h.db.Model(&models.Landmark{}).Where("city ILIKE ?", city).Preload("Images")
+	query = applyFilters(query, queryParams.Filters)
+	query = applySorting(query, queryParams.SortBy, queryParams.SortOrder)
+
+	var landmarks []models.Landmark
+	if err := query.Offset(queryParams.Offset).Limit(queryParams.Limit).Find(&landmarks).Error; err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error fetching landmarks")
+		return
+	}
+
+	// If no landmarks found, return empty result instead of error
+	if len(landmarks) == 0 {
+		emptyResponse := map[string]interface{}{
+			"data": []interface{}{},
+			"meta": map[string]interface{}{
+				"total":  0,
+				"limit":  queryParams.Limit,
+				"offset": queryParams.Offset,
+			},
+		}
+
+		// Cache the empty response too
+		h.cacheService.Set(ctx, cacheKey, emptyResponse, 15*time.Minute)
+		w.Header().Set("X-Cache", "MISS")
+		respondWithJSON(w, http.StatusOK, emptyResponse)
+		return
+	}
+
+	// Process the landmarks list based on subscription and query parameters
+	response := h.processLandmarkList(ctx, landmarks, subscription, queryParams)
+
+	// Cache the successful response
+	if err := h.cacheService.Set(ctx, cacheKey, response, 15*time.Minute); err != nil {
+		// Log cache set error but continue with response
+		log.Printf("Error setting cache: %v", err)
+	}
+
+	w.Header().Set("X-Cache", "MISS")
+	respondWithJSON(w, http.StatusOK, response)
+}
+
 // Define a struct for the search request
 type SearchRequest struct {
 	Latitude  float64 `json:"latitude"`

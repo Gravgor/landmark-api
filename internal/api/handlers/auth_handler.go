@@ -63,7 +63,7 @@ type checkResponse struct {
 	Name        string `json:"name"`
 	Email       string `json:"email"`
 	APIKey      string `json:"apiKey"`
-	OnBoarding  bool   `json:"on_boarding"`
+	OnBoarding  bool   `json:"onboarding"`
 	PlanType    string `json:"planType"`
 	ApiCalls    uint   `json:"apiCalls"`
 	ApiLimit    uint   `json:"apiLimit"`
