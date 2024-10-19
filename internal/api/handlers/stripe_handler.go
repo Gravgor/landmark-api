@@ -40,6 +40,7 @@ func NewStripeHandler(auth services.AuthService, subRepo repository.Subscription
 }
 
 const (
+	PlanTypeFree    = "free"
 	PlanTypeMonthly = "monthly"
 	PlanTypeAnnual  = "annual"
 
@@ -89,6 +90,8 @@ func (h *StripeHandler) HandleCreateCheckOut(w http.ResponseWriter, r *http.Requ
 
 func (h *StripeHandler) getPriceIDForPlan(planType string) (string, error) {
 	switch planType {
+	case PlanTypeFree:
+		return os.Getenv("STRIPE_MONTHLY_FREE_PRICE_ID"), nil
 	case PlanTypeMonthly:
 		return os.Getenv("STRIPE_MONTHLY_PRICE_ID"), nil
 	case PlanTypeAnnual:
@@ -122,6 +125,8 @@ func (h *StripeHandler) createStripeCheckoutSession(customerID, priceID string) 
 
 	return s.ID, nil
 }
+
+// Other methods remain unchanged
 
 func (h *StripeHandler) HandleStripeWebhook(w http.ResponseWriter, r *http.Request) {
 	const MaxBodyBytes = int64(65536)
