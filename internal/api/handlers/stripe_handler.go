@@ -145,7 +145,6 @@ func (h *StripeHandler) HandleStripeWebhook(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Pass the request body and Stripe-Signature header to ConstructEvent, along with the webhook signing key
 	event, err := webhook.ConstructEvent(payload, r.Header.Get("Stripe-Signature"), os.Getenv("STRIPE_WEBHOOK_SECRET"))
 
 	if err != nil {
@@ -256,30 +255,62 @@ func (h *StripeHandler) handleCheckoutSessionCompleted(ctx context.Context, sess
 		log.Printf("Error retrieving user for customer %s: %v", session.Customer.ID, err)
 		return
 	}
+
+	var priceID string
+	if len(session.Subscription.Items.Data) > 0 {
+		priceID = session.Subscription.Items.Data[0].Price.ID
+	} else {
+		log.Printf("No subscription items found for customer %s", session.Customer.ID)
+		return
+	}
+
+	planType, err := h.getPlanTypeFromPriceID(priceID)
+	if err != nil {
+		log.Printf("Error determining plan type for price ID %s: %v", priceID, err)
+		return
+	}
+
 	subscription := &models.Subscription{
 		UserID:           user.ID,
 		StripeCustomerID: session.Customer.ID,
 		StripePlanID:     session.Subscription.ID,
-		Status:           "active",
-		PlanType:         "PRO",
-		EndDate:          time.Now().Add(30 * 24 * time.Hour),
+		Status:           string(session.Subscription.Status),
+		PlanType:         planType,
+		EndDate:          time.Unix(session.Subscription.CurrentPeriodEnd, 0),
 	}
+
 	err = h.subRepo.Create(ctx, subscription)
 	if err != nil {
 		log.Printf("Error creating/updating subscription for user %d: %v", user.ID, err)
 		return
 	}
+
 	_, err = h.apiKeyService.AssignAPIKeyToUser(ctx, user.ID)
 	if err != nil {
 		log.Printf("Error creating api key for user %d: %v", user.ID, err)
 		return
 	}
+
 	err = h.userRepo.GrantAccess(ctx, user.ID)
 	if err != nil {
 		log.Printf("Error granting service access to user %d: %v", user.ID, err)
 		return
 	}
-	fmt.Printf("Subscription created for customer: %s\n", session.Customer.ID)
+
+	fmt.Printf("Subscription created for customer: %s with plan type: %s\n", session.Customer.ID, planType)
+}
+
+func (h *StripeHandler) getPlanTypeFromPriceID(priceID string) (models.SubscriptionPlan, error) {
+	switch priceID {
+	case os.Getenv("STRIPE_MONTHLY_FREE_PRICE_ID"):
+		return models.FreePlan, nil
+	case os.Getenv("STRIPE_MONTHLY_PRICE_ID"):
+		return models.ProPlan, nil
+	case os.Getenv("STRIPE_ENTERPRISE_PLAN_PRICE_ID"):
+		return models.EnterprisePlan, nil
+	default:
+		return "", fmt.Errorf("unknown price ID: %s", priceID)
+	}
 }
 
 func (h *StripeHandler) handleSubscriptionUpdated(ctx context.Context, subscription stripe.Subscription) {
