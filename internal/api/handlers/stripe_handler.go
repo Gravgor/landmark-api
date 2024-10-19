@@ -40,6 +40,7 @@ func NewStripeHandler(auth services.AuthService, subRepo repository.Subscription
 }
 
 const (
+	PlanTypeFree    = "free"
 	PlanTypeMonthly = "monthly"
 	PlanTypeAnnual  = "annual"
 
@@ -89,6 +90,8 @@ func (h *StripeHandler) HandleCreateCheckOut(w http.ResponseWriter, r *http.Requ
 
 func (h *StripeHandler) getPriceIDForPlan(planType string) (string, error) {
 	switch planType {
+	case PlanTypeFree:
+		return os.Getenv("STRIPE_MONTHLY_FREE_PRICE_ID"), nil
 	case PlanTypeMonthly:
 		return os.Getenv("STRIPE_MONTHLY_PRICE_ID"), nil
 	case PlanTypeAnnual:
@@ -101,9 +104,6 @@ func (h *StripeHandler) getPriceIDForPlan(planType string) (string, error) {
 func (h *StripeHandler) createStripeCheckoutSession(customerID, priceID string) (string, error) {
 	params := &stripe.CheckoutSessionParams{
 		Customer: stripe.String(customerID),
-		PaymentMethodTypes: stripe.StringSlice([]string{
-			"card",
-		}),
 		LineItems: []*stripe.CheckoutSessionLineItemParams{
 			{
 				Price:    stripe.String(priceID),
@@ -115,6 +115,12 @@ func (h *StripeHandler) createStripeCheckoutSession(customerID, priceID string) 
 		CancelURL:  stripe.String("https://www.landmark-api.com/cancel"),
 	}
 
+	if priceID == os.Getenv("STRIPE_MONTHLY_FREE_PRICE_ID") {
+		params.PaymentMethodTypes = stripe.StringSlice([]string{})
+	} else {
+		params.PaymentMethodTypes = stripe.StringSlice([]string{"card"})
+	}
+
 	s, err := session.New(params)
 	if err != nil {
 		return "", err
@@ -122,6 +128,8 @@ func (h *StripeHandler) createStripeCheckoutSession(customerID, priceID string) 
 
 	return s.ID, nil
 }
+
+// Other methods remain unchanged
 
 func (h *StripeHandler) HandleStripeWebhook(w http.ResponseWriter, r *http.Request) {
 	const MaxBodyBytes = int64(65536)
