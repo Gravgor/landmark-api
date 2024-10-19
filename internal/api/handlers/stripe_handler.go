@@ -248,17 +248,30 @@ func (h *StripeHandler) HandleUserBillingInfo(w http.ResponseWriter, r *http.Req
 }
 
 func (h *StripeHandler) handleCheckoutSessionCompleted(ctx context.Context, session stripe.CheckoutSession) {
+	if session.Customer == nil {
+		log.Printf("Error: Customer is nil in the checkout session")
+		return
+	}
+
 	user, err := h.authService.GetUserByStripeCustomerID(ctx, session.Customer.ID)
 	if err != nil {
 		log.Printf("Error retrieving user for customer %s: %v", session.Customer.ID, err)
 		return
 	}
 
-	var priceID string
-	if len(session.Subscription.Items.Data) > 0 {
-		priceID = session.Subscription.Items.Data[0].Price.ID
-	} else {
+	if session.Subscription == nil {
+		log.Printf("Error: Subscription is nil in the checkout session for customer %s", session.Customer.ID)
+		return
+	}
+
+	if session.Subscription.Items == nil || len(session.Subscription.Items.Data) == 0 {
 		log.Printf("No subscription items found for customer %s", session.Customer.ID)
+		return
+	}
+
+	priceID := session.Subscription.Items.Data[0].Price.ID
+	if priceID == "" {
+		log.Printf("Error: Price ID is empty for customer %s", session.Customer.ID)
 		return
 	}
 
@@ -295,9 +308,8 @@ func (h *StripeHandler) handleCheckoutSessionCompleted(ctx context.Context, sess
 		return
 	}
 
-	fmt.Printf("Subscription created for customer: %s with plan type: %s\n", session.Customer.ID, planType)
+	log.Printf("Subscription created for customer: %s with plan type: %s", session.Customer.ID, planType)
 }
-
 func (h *StripeHandler) getPlanTypeFromPriceID(priceID string) (models.SubscriptionPlan, error) {
 	switch priceID {
 	case os.Getenv("STRIPE_MONTHLY_FREE_PRICE_ID"):
