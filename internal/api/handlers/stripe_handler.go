@@ -20,7 +20,6 @@ import (
 	"github.com/stripe/stripe-go/v72/checkout/session"
 	"github.com/stripe/stripe-go/v72/invoice"
 	"github.com/stripe/stripe-go/v72/sub"
-	"github.com/stripe/stripe-go/v72/webhook"
 )
 
 type StripeHandler struct {
@@ -145,15 +144,14 @@ func (h *StripeHandler) HandleStripeWebhook(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	event, err := webhook.ConstructEvent(payload, r.Header.Get("Stripe-Signature"), os.Getenv("STRIPE_WEBHOOK_SECRET"))
+	event := stripe.Event{}
 
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error verifying webhook signature: %v\n", err)
+	if err := json.Unmarshal(payload, &event); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to parse webhook body json: %v\n", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	// Handle the event
 	switch event.Type {
 	case "checkout.session.completed":
 		var session stripe.CheckoutSession
