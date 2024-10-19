@@ -75,3 +75,5 @@
 {"ip":"127.0.0.1:59405","level":"info","method":"GET","msg":"Request handled","response_time":7516,"status_code":200,"time":"2024-10-16T19:57:00+02:00","url":"/api/v1/landmarks/category/Museum"}
 {"level":"info","msg":"API started","port":"8080","time":"2024-10-18T18:16:02+02:00"}
 {"ip":"127.0.0.1:62464","level":"info","method":"POST","msg":"Request handled","response_time":3362,"status_code":200,"time":"2024-10-18T18:16:17+02:00","url":"/auth/register-email"}
+{"level":"info","msg":"API started","port":"8080","time":"2024-10-19T14:44:59+02:00"}
+{"ip":"127.0.0.1:56620","level":"info","method":"GET","msg":"Request handled","response_time":5576,"status_code":200,"time":"2024-10-19T14:45:36+02:00","url":"/api/v1/landmarks/name/CN"}

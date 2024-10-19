@@ -82,7 +82,7 @@ func main() {
 		log.Fatal("JWT_SECRET environment variable is required")
 	}
 
-	apiKeyService := services.NewAPIKeyService(apiKeyRepo)
+	apiKeyService := services.NewAPIKeyService(apiKeyRepo, userRepo, subscriptionRepo)
 
 	authService := services.NewAuthService(
 		userRepo,
@@ -150,7 +150,6 @@ func main() {
 
 	// API routes (protected)
 	apiRouter := router.PathPrefix("/api/v1").Subrouter()
-	apiRouter.Use(middleware.AuthMiddleware(authService))
 	apiRouter.Use(middleware.APIKeyMiddleware(apiKeyService))
 	apiRouter.Use(rateLimiter.RateLimit(authService, apiUsageService))
 	apiRouter.Use(requestLogger.LogRequest)
