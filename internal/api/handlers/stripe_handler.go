@@ -153,15 +153,15 @@ func (h *StripeHandler) HandleStripeWebhook(w http.ResponseWriter, r *http.Reque
 	}
 
 	switch event.Type {
-	case "checkout.session.completed":
-		var session stripe.CheckoutSession
-		err := json.Unmarshal(event.Data.Raw, &session)
+	case "customer.subscription.created":
+		var subscription stripe.Subscription
+		err := json.Unmarshal(event.Data.Raw, &subscription)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error parsing webhook JSON: %v\n", err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		h.handleCheckoutSessionCompleted(r.Context(), session)
+		h.handleSubscriptionCreated(r.Context(), &subscription)
 	case "customer.subscription.updated", "customer.subscription.deleted":
 		var subscription stripe.Subscription
 		err := json.Unmarshal(event.Data.Raw, &subscription)
@@ -245,6 +245,62 @@ func (h *StripeHandler) HandleUserBillingInfo(w http.ResponseWriter, r *http.Req
 		http.Error(w, "Failed to encode billing info", http.StatusInternalServerError)
 		return
 	}
+}
+
+func (h *StripeHandler) handleSubscriptionCreated(ctx context.Context, subscription *stripe.Subscription) error {
+	if subscription == nil {
+		return fmt.Errorf("subscription is nil")
+	}
+
+	if subscription.Customer == nil {
+		return fmt.Errorf("customer is nil in the subscription")
+	}
+
+	user, err := h.authService.GetUserByStripeCustomerID(ctx, subscription.Customer.ID)
+	if err != nil {
+		return fmt.Errorf("error retrieving user for customer %s: %w", subscription.Customer.ID, err)
+	}
+
+	if len(subscription.Items.Data) == 0 {
+		return fmt.Errorf("no subscription items found for customer %s", subscription.Customer.ID)
+	}
+
+	priceID := subscription.Items.Data[0].Price.ID
+	if priceID == "" {
+		return fmt.Errorf("price ID is empty for customer %s", subscription.Customer.ID)
+	}
+
+	planType, err := h.getPlanTypeFromPriceID(priceID)
+	if err != nil {
+		return fmt.Errorf("error determining plan type for price ID %s: %w", priceID, err)
+	}
+
+	subscriptionModel := &models.Subscription{
+		UserID:           user.ID,
+		StripeCustomerID: subscription.Customer.ID,
+		StripePlanID:     subscription.ID,
+		Status:           string(subscription.Status),
+		PlanType:         planType,
+		EndDate:          time.Unix(subscription.CurrentPeriodEnd, 0),
+	}
+
+	err = h.subRepo.Create(ctx, subscriptionModel)
+	if err != nil {
+		return fmt.Errorf("error creating/updating subscription for user %d: %w", user.ID, err)
+	}
+
+	_, err = h.apiKeyService.AssignAPIKeyToUser(ctx, user.ID)
+	if err != nil {
+		return fmt.Errorf("error creating api key for user %d: %w", user.ID, err)
+	}
+
+	err = h.userRepo.GrantAccess(ctx, user.ID)
+	if err != nil {
+		return fmt.Errorf("error granting service access to user %d: %w", user.ID, err)
+	}
+
+	log.Printf("Subscription created for customer: %s with plan type: %s", subscription.Customer.ID, planType)
+	return nil
 }
 
 func (h *StripeHandler) handleCheckoutSessionCompleted(ctx context.Context, session stripe.CheckoutSession) {
