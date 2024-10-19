@@ -115,7 +115,13 @@ func (h *StripeHandler) createStripeCheckoutSession(customerID, priceID string) 
 		CancelURL:  stripe.String("https://www.landmark-api.com/cancel"),
 	}
 
-	if priceID == os.Getenv("STRIPE_MONTHLY_PRICE_ID") {
+	if priceID == os.Getenv("STRIPE_MONTHLY_FREE_PRICE_ID") {
+		params.Discounts = []*stripe.CheckoutSessionDiscountParams{
+			{
+				Coupon: stripe.String("GMBDmApc"),
+			},
+		}
+	} else {
 		params.PaymentMethodTypes = stripe.StringSlice([]string{"card"})
 	}
 
