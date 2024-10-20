@@ -44,6 +44,42 @@ type LandmarkDetail struct {
 	DeletedAt              gorm.DeletedAt    `gorm:"index" json:"-"`
 }
 
+type SubmissionLandmark struct {
+	ID          uuid.UUID `gorm:"type:uuid;primary_key"`
+	Name        string
+	Description string
+	Latitude    float64
+	Longitude   float64
+	Country     string
+	City        string
+	Category    string
+	Status      string // "pending", "approved", or "rejected"
+	Images      []SubmissionLandmarkImage
+	Detail      SubmissionLandmarkDetail
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+type SubmissionLandmarkImage struct {
+	ID                   uuid.UUID `gorm:"type:uuid;primary_key"`
+	SubmissionLandmarkID uuid.UUID
+	ImageURL             string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+}
+
+type SubmissionLandmarkDetail struct {
+	ID                     uuid.UUID `gorm:"type:uuid;primary_key"`
+	SubmissionLandmarkID   uuid.UUID
+	OpeningHours           map[string]string
+	TicketPrices           map[string]string
+	HistoricalSignificance string
+	VisitorTips            string
+	AccessibilityInfo      string
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
+}
+
 func (Landmark) TableName() string {
 	return "landmarks"
 }
