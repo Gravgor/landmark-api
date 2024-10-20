@@ -16,7 +16,7 @@ CREATE_URL = "https://api.landmark-api.com/2079a66bb2f2859a721b9987ded608013fb38
 UNSPLASH_URL = "https://api.unsplash.com/search/photos?client_id=CmOoJszifpwLyIhpB_QhjmMZ2Xsvc4SILzJv987G9oo"
 HEADERS = {
     "x-api-key": "43f79790-bc83-47a5-ad99-ee965c27bc34",
-    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MjkzNjY2MDUsInBsYW5fdHlwZSI6IlBSTyIsInJvbGUiOiJhZG1pbiIsInN1YnNjcmlwdGlvbl9pZCI6IjllYzRiYTcwLThkOTctNDY5OC05ZDllLWM2MTdkZGQyZjljNiIsInVzZXJfaWQiOiJkN2NlY2JhNS1iODFiLTRhMTItYWE3My0zZjcxYjNiZGI2NjMifQ.D9yc4Eqqflv0A2gpVTmp1-v0n1gz2NV04pBwNcF-ZLU"
+    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Mjk0NTI2MTIsInBsYW5fdHlwZSI6IlBSTyIsInJvbGUiOiJhZG1pbiIsInN1YnNjcmlwdGlvbl9pZCI6IjllYzRiYTcwLThkOTctNDY5OC05ZDllLWM2MTdkZGQyZjljNiIsInVzZXJfaWQiOiJkN2NlY2JhNS1iODFiLTRhMTItYWE3My0zZjcxYjNiZGI2NjMifQ.ZXqRSKl-E2Pc_tfV5vggy7Qco-Ios1UIiYlkCxlmhBw"
 }
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -164,123 +164,36 @@ def process_landmarks(landmarks: List[Dict]):
 # Example usage
 if __name__ == "__main__":
     landmarks = [
-              {
+ 
+        {
             "landmark": {
-                "name": "Hollywood Sign",
-                "description": "An iconic landmark and cultural symbol overlooking Hollywood, Los Angeles.",
-                "latitude": 34.1341,
-                "longitude": -118.3215,
-                "country": "United States",
-                "city": "Los Angeles",
-                "category": "Cultural Landmark"
+                "name": "The Valley of Kings",
+                "description": "A famous archaeological site in Egypt, known for its numerous tombs of pharaohs and nobles from the New Kingdom.",
+                "latitude": 25.7408,
+                "longitude": 32.6010,
+                "country": "Egypt",
+                "city": "Luxor",
+                "category": "Historical Landmark"
             },
             "landmark_detail": {
                 "opening_hours": {
-                    "Monday": "Open 24 hours",
-                    "Tuesday": "Open 24 hours",
-                    "Wednesday": "Open 24 hours",
-                    "Thursday": "Open 24 hours",
-                    "Friday": "Open 24 hours",
-                    "Saturday": "Open 24 hours",
-                    "Sunday": "Open 24 hours"
+                    "Monday": "6:00 AM - 5:00 PM",
+                    "Tuesday": "6:00 AM - 5:00 PM",
+                    "Wednesday": "6:00 AM - 5:00 PM",
+                    "Thursday": "6:00 AM - 5:00 PM",
+                    "Friday": "6:00 AM - 5:00 PM",
+                    "Saturday": "6:00 AM - 5:00 PM",
+                    "Sunday": "6:00 AM - 5:00 PM"
                 },
                 "ticket_prices": {
-                    "Adult": "Free",
-                    "Child": "Free"
+                    "Adult": "$10",
+                    "Child": "$5"
                 },
-                "historical_significance": "Originally created in 1923 as an advertisement for a real estate development.",
-                "visitor_tips": "Hike up to the sign for a closer view and great photo opportunities.",
+                "historical_significance": "The burial site of many pharaohs, including Tutankhamun and Ramses II, dating back to the 16th to 11th century BC.",
+                "visitor_tips": "Purchase a combined ticket to access multiple tombs and consider hiring a guide for deeper insights.",
                 "accessibility_info": "Partially accessible"
             }
-        },
-        {
-            "landmark": {
-                "name": "Mount Vernon",
-                "description": "The plantation home of George Washington, the first President of the United States.",
-                "latitude": 38.7073,
-                "longitude": -77.0861,
-                "country": "United States",
-                "city": "Mount Vernon",
-                "category": "Historical Site"
-            },
-            "landmark_detail": {
-                "opening_hours": {
-                    "Monday": "09:00-17:00",
-                    "Tuesday": "09:00-17:00",
-                    "Wednesday": "09:00-17:00",
-                    "Thursday": "09:00-17:00",
-                    "Friday": "09:00-17:00",
-                    "Saturday": "09:00-17:00",
-                    "Sunday": "09:00-17:00"
-                },
-                "ticket_prices": {
-                    "Adult": "28 USD",
-                    "Child": "15 USD"
-                },
-                "historical_significance": "A National Historic Landmark, it was Washington's home and plantation.",
-                "visitor_tips": "Take a guided tour to learn more about Washington's life and legacy.",
-                "accessibility_info": "Fully accessible"
-            }
-        },
-        {
-            "landmark": {
-                "name": "Golden Gate Park",
-                "description": "A large urban park consisting of gardens, museums, and recreational areas.",
-                "latitude": 37.7694,
-                "longitude": -122.4862,
-                "country": "United States",
-                "city": "San Francisco",
-                "category": "Park"
-            },
-            "landmark_detail": {
-                "opening_hours": {
-                    "Monday": "05:00-00:00",
-                    "Tuesday": "05:00-00:00",
-                    "Wednesday": "05:00-00:00",
-                    "Thursday": "05:00-00:00",
-                    "Friday": "05:00-00:00",
-                    "Saturday": "05:00-00:00",
-                    "Sunday": "05:00-00:00"
-                },
-                "ticket_prices": {
-                    "Adult": "Free",
-                    "Child": "Free"
-                },
-                "historical_significance": "Established in 1871, it is one of the most visited parks in the United States.",
-                "visitor_tips": "Visit the Japanese Tea Garden and the de Young Museum.",
-                "accessibility_info": "Fully accessible"
-            }
-        },
-        {
-            "landmark": {
-                "name": "Independence Hall",
-                "description": "The building where the Declaration of Independence and the United States Constitution were debated and adopted.",
-                "latitude": 39.9489,
-                "longitude": -75.1500,
-                "country": "United States",
-                "city": "Philadelphia",
-                "category": "Historical Site"
-            },
-            "landmark_detail": {
-                "opening_hours": {
-                    "Monday": "09:00-17:00",
-                    "Tuesday": "09:00-17:00",
-                    "Wednesday": "09:00-17:00",
-                    "Thursday": "09:00-17:00",
-                    "Friday": "09:00-17:00",
-                    "Saturday": "09:00-17:00",
-                    "Sunday": "09:00-17:00"
-                },
-                "ticket_prices": {
-                    "Adult": "Free (Timed entry tickets required)",
-                    "Child": "Free"
-                },
-                "historical_significance": "A UNESCO World Heritage site, it is considered the birthplace of the United States.",
-                "visitor_tips": "Reserve tickets in advance to ensure entry.",
-                "accessibility_info": "Fully accessible"
-            }
         }
-
     ]
 
 

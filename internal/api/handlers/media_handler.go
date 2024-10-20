@@ -132,6 +132,87 @@ func (h *FileUploadHandler) uploadFile(landmarkID string, fileHeader *multipart.
 	return fmt.Sprintf("https://%s.s3.amazonaws.com/%s", h.Bucket, key), nil
 }
 
+// SubmitPhotos godoc
+// @Summary Submit photos
+// @Description Uploads multiple photos to S3 and returns their URLs
+// @Tags photos
+// @Accept multipart/form-data
+// @Produce json
+// @Param photos formData file true "Photos to upload"
+// @Success 200 {object} uploadResponse
+// @Failure 400 {string} string "Invalid request"
+// @Failure 500 {string} string "Internal server error"
+// @Router /submit-photos [post]
+func (h *FileUploadHandler) SubmitPhotos(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse the multipart form
+	err := r.ParseMultipartForm(32 << 20) // 32 MB max
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	files := r.MultipartForm.File["photos"]
+	if len(files) == 0 {
+		http.Error(w, "No photos uploaded", http.StatusBadRequest)
+		return
+	}
+
+	var urls []string
+	for _, fileHeader := range files {
+		url, err := h.uploadPhoto(fileHeader)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		urls = append(urls, url)
+	}
+
+	// Return the URLs to the client
+	resp := uploadResponse{URLs: urls}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
+func (h *FileUploadHandler) uploadPhoto(fileHeader *multipart.FileHeader) (string, error) {
+	// Open the file
+	file, err := fileHeader.Open()
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	// Read the file content
+	buffer, err := io.ReadAll(file)
+	if err != nil {
+		return "", err
+	}
+
+	// Generate a unique filename
+	filename := generateUniqueFilename(fileHeader.Filename)
+
+	// Create the S3 key (path)
+	key := fmt.Sprintf("user-photos/%s", filename)
+
+	// Upload to S3
+	_, err = h.S3Client.PutObject(&s3.PutObjectInput{
+		Bucket:      aws.String(h.Bucket),
+		Key:         aws.String(key),
+		Body:        bytes.NewReader(buffer),
+		ContentType: aws.String(fileHeader.Header.Get("Content-Type")),
+	})
+	if err != nil {
+		return "", err
+	}
+
+	// Construct and return the S3 URL
+	return fmt.Sprintf("https://%s.s3.amazonaws.com/%s", h.Bucket, key), nil
+}
+
 func generateUniqueFilename(originalFilename string) string {
 	extension := filepath.Ext(originalFilename)
 	filename := strings.TrimSuffix(originalFilename, extension)

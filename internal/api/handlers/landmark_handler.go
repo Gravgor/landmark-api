@@ -909,6 +909,216 @@ func applySorting(query *gorm.DB, sortBy, sortOrder string) *gorm.DB {
 	return query
 }
 
+func (h *LandmarkHandler) CreateSubmission(w http.ResponseWriter, r *http.Request) {
+	var submissionData struct {
+		Landmark       models.SubmissionLandmark       `json:"landmark"`
+		LandmarkDetail models.SubmissionLandmarkDetail `json:"landmark_detail"`
+		ImageURLs      []string                        `json:"image_urls"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&submissionData); err != nil {
+		log.Printf("Error decoding JSON: %v", err)
+		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	// Start a database transaction
+	tx := h.db.Begin()
+	if tx.Error != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to start database transaction")
+		return
+	}
+
+	// Create the SubmissionLandmark
+	submissionData.Landmark.ID = uuid.New()
+	submissionData.Landmark.Status = "pending"
+
+	if err := tx.Create(&submissionData.Landmark).Error; err != nil {
+		tx.Rollback()
+		respondWithError(w, http.StatusInternalServerError, "Failed to create landmark submission")
+		return
+	}
+
+	// Create SubmissionLandmarkImage entries
+	for _, url := range submissionData.ImageURLs {
+		submissionImage := models.SubmissionLandmarkImage{
+			ID:                   uuid.New(),
+			SubmissionLandmarkID: submissionData.Landmark.ID,
+			ImageURL:             url,
+		}
+		if err := tx.Create(&submissionImage).Error; err != nil {
+			tx.Rollback()
+			respondWithError(w, http.StatusInternalServerError, "Failed to create landmark image submission")
+			return
+		}
+	}
+
+	// Create the SubmissionLandmarkDetail
+	submissionData.LandmarkDetail.ID = uuid.New()
+	submissionData.LandmarkDetail.SubmissionLandmarkID = submissionData.Landmark.ID
+	if err := tx.Create(&submissionData.LandmarkDetail).Error; err != nil {
+		tx.Rollback()
+		respondWithError(w, http.StatusInternalServerError, "Failed to create landmark details submission")
+		return
+	}
+
+	// Commit the transaction
+	if err := tx.Commit().Error; err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to commit transaction")
+		return
+	}
+
+	// Log the submission
+	userID := getUserIDFromContext(r.Context()) // Implement this function to get the user ID from the context
+	err := h.auditService.CreateAuditLog(r.Context(), userID, "CREATE", "SUBMISSION_LANDMARK", submissionData.Landmark.ID.String(), "Created landmark submission")
+	if err != nil {
+		log.Printf("Failed to create audit log: %v", err)
+	}
+
+	respondWithJSON(w, http.StatusCreated, map[string]string{"message": "Landmark submission created successfully", "id": submissionData.Landmark.ID.String()})
+}
+
+func (h *LandmarkHandler) ListPendingSubmissions(w http.ResponseWriter, r *http.Request) {
+	var submissions []models.SubmissionLandmark
+	if err := h.db.Where("status = ?", "pending").Preload("Images").Find(&submissions).Error; err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to fetch pending submissions")
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, submissions)
+}
+
+func (h *LandmarkHandler) ApproveSubmission(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := uuid.Parse(vars["id"])
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid submission ID")
+		return
+	}
+
+	tx := h.db.Begin()
+	if tx.Error != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to start database transaction")
+		return
+	}
+
+	var submission models.SubmissionLandmark
+	if err := tx.Preload("Images").Preload("Detail").First(&submission, id).Error; err != nil {
+		tx.Rollback()
+		respondWithError(w, http.StatusNotFound, "Submission not found")
+		return
+	}
+
+	// Create new Landmark from submission
+	newLandmark := models.Landmark{
+		ID:          uuid.New(),
+		Name:        submission.Name,
+		Description: submission.Description,
+		Latitude:    submission.Latitude,
+		Longitude:   submission.Longitude,
+		Country:     submission.Country,
+		City:        submission.City,
+		Category:    submission.Category,
+	}
+
+	if err := tx.Create(&newLandmark).Error; err != nil {
+		tx.Rollback()
+		respondWithError(w, http.StatusInternalServerError, "Failed to create new landmark")
+		return
+	}
+
+	// Create LandmarkImages
+	for _, img := range submission.Images {
+		newImage := models.LandmarkImage{
+			ID:         uuid.New(),
+			LandmarkID: newLandmark.ID,
+			ImageURL:   img.ImageURL,
+		}
+		if err := tx.Create(&newImage).Error; err != nil {
+			tx.Rollback()
+			respondWithError(w, http.StatusInternalServerError, "Failed to create landmark image")
+			return
+		}
+	}
+
+	// Create LandmarkDetail
+	newDetail := models.LandmarkDetail{
+		ID:                     uuid.New(),
+		LandmarkID:             newLandmark.ID,
+		OpeningHours:           submission.Detail.OpeningHours,
+		TicketPrices:           submission.Detail.TicketPrices,
+		HistoricalSignificance: submission.Detail.HistoricalSignificance,
+		VisitorTips:            submission.Detail.VisitorTips,
+		AccessibilityInfo:      submission.Detail.AccessibilityInfo,
+	}
+
+	if err := tx.Create(&newDetail).Error; err != nil {
+		tx.Rollback()
+		respondWithError(w, http.StatusInternalServerError, "Failed to create landmark details")
+		return
+	}
+
+	// Update submission status
+	if err := tx.Model(&submission).Update("status", "approved").Error; err != nil {
+		tx.Rollback()
+		respondWithError(w, http.StatusInternalServerError, "Failed to update submission status")
+		return
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to commit transaction")
+		return
+	}
+
+	// Log the approval
+	adminID := getAdminIDFromContext(r.Context()) // Implement this function to get the admin ID from the context
+	err = h.auditService.CreateAuditLog(r.Context(), adminID, "APPROVE", "SUBMISSION_LANDMARK", submission.ID.String(), "Approved landmark submission")
+	if err != nil {
+		log.Printf("Failed to create audit log: %v", err)
+	}
+
+	respondWithJSON(w, http.StatusOK, map[string]string{"message": "Landmark submission approved successfully", "new_landmark_id": newLandmark.ID.String()})
+}
+
+func (h *LandmarkHandler) RejectSubmission(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := uuid.Parse(vars["id"])
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid submission ID")
+		return
+	}
+
+	var submission models.SubmissionLandmark
+	if err := h.db.First(&submission, id).Error; err != nil {
+		respondWithError(w, http.StatusNotFound, "Submission not found")
+		return
+	}
+
+	if err := h.db.Model(&submission).Update("status", "rejected").Error; err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to update submission status")
+		return
+	}
+
+	// Log the rejection
+	adminID := getAdminIDFromContext(r.Context()) // Implement this function to get the admin ID from the context
+	err = h.auditService.CreateAuditLog(r.Context(), adminID, "REJECT", "SUBMISSION_LANDMARK", submission.ID.String(), "Rejected landmark submission")
+	if err != nil {
+		log.Printf("Failed to create audit log: %v", err)
+	}
+
+	respondWithJSON(w, http.StatusOK, map[string]string{"message": "Landmark submission rejected successfully"})
+}
+
+func getUserIDFromContext(ctx context.Context) int {
+	// Implement this function to get the user ID from the context
+	return 0
+}
+
+func getAdminIDFromContext(ctx context.Context) int {
+	// Implement this function to get the admin ID from the context
+	return 0
+}
+
 func (h *LandmarkHandler) prepareResponse(ctx context.Context, landmark *models.Landmark, subscription *models.Subscription, params QueryParams) interface{} {
 	var response interface{}
 

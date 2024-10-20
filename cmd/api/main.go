@@ -148,6 +148,10 @@ func main() {
 	router.HandleFunc("/swagger", httpSwagger.WrapHandler).Methods("GET")
 	router.HandleFunc("/uptime", uptimeHandler.ServeHTTP).Methods("GET")
 
+	contributionRouter := router.PathPrefix("/api/v1/contribution").Subrouter()
+	contributionRouter.HandleFunc("/submit-landmark", landmarkHandler.CreateSubmission).Methods("POST")
+	contributionRouter.HandleFunc("/submit-photo", fileUploadHandler.SubmitPhotos).Methods("POST")
+
 	// API routes (protected)
 	apiRouter := router.PathPrefix("/api/v1").Subrouter()
 	apiRouter.Use(middleware.APIKeyMiddleware(apiKeyService))
