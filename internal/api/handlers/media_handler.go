@@ -156,7 +156,7 @@ func (h *FileUploadHandler) SubmitPhotos(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	files := r.MultipartForm.File["photos"]
+	files := r.MultipartForm.File["images"]
 	if len(files) == 0 {
 		http.Error(w, "No photos uploaded", http.StatusBadRequest)
 		return
