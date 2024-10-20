@@ -49,5 +49,5 @@ func autoMigrate(db *gorm.DB) error {
 	if err != nil {
 		log.Fatal("Failed to drop tables: ", err)
 	}*/
-	return db.AutoMigrate(&models.LandmarkImage{})
+	return db.AutoMigrate(&models.SubmissionLandmark{}, &models.SubmissionLandmarkDetail{}, &models.SubmissionLandmarkImage{})
 }
