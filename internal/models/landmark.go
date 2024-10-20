@@ -45,34 +45,34 @@ type LandmarkDetail struct {
 }
 
 type SubmissionLandmark struct {
-	ID          uuid.UUID `gorm:"type:uuid;primary_key"`
-	Name        string
-	Description string
-	Latitude    float64
-	Longitude   float64
-	Country     string
-	City        string
-	Category    string
-	Status      string // "pending", "approved", or "rejected"
-	Images      []SubmissionLandmarkImage
-	Detail      SubmissionLandmarkDetail
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID          uuid.UUID                 `gorm:"type:uuid;primaryKey" json:"-"`
+	Name        string                    `gorm:"type:varchar(255);not null" json:"name"`
+	Description string                    `gorm:"type:text;not null" json:"description"`
+	Latitude    float64                   `gorm:"type:decimal(10,8);not null" json:"latitude"`
+	Longitude   float64                   `gorm:"type:decimal(11,8);not null" json:"longitude"`
+	Country     string                    `gorm:"type:varchar(100);not null" json:"country"`
+	City        string                    `gorm:"type:varchar(100);not null" json:"city"`
+	Category    string                    `gorm:"type:varchar(50);not null" json:"category"`
+	Status      string                    // "pending", "approved", or "rejected"
+	Images      []SubmissionLandmarkImage `gorm:"foreignKey:SubmissionLandmarkID" json:"images"`
+	Detail      SubmissionLandmarkDetail  `gorm:"foreignKey:SubmissionLandmarkID" json:"details"`
+	CreatedAt   time.Time                 `gorm:"not null;default:CURRENT_TIMESTAMP" json:"created_at"`
+	UpdatedAt   time.Time                 `gorm:"not null;default:CURRENT_TIMESTAMP" json:"updated_at"`
 }
 
 type SubmissionLandmarkImage struct {
-	ID                   uuid.UUID `gorm:"type:uuid;primary_key"`
-	SubmissionLandmarkID uuid.UUID
+	ID                   uuid.UUID `gorm:"type:uuid;primaryKey" json:"-"`
+	SubmissionLandmarkID uuid.UUID `gorm:"type:uuid;not null;uniqueIndex" json:"-"`
 	ImageURL             string
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 }
 
 type SubmissionLandmarkDetail struct {
-	ID                     uuid.UUID `gorm:"type:uuid;primary_key"`
-	SubmissionLandmarkID   uuid.UUID
-	OpeningHours           map[string]string
-	TicketPrices           map[string]string
+	ID                     uuid.UUID         `gorm:"type:uuid;primaryKey" json:"-"`
+	SubmissionLandmarkID   uuid.UUID         `gorm:"type:uuid;not null;uniqueIndex" json:"-"`
+	OpeningHours           map[string]string `gorm:"type:jsonb" json:"opening_hours"`
+	TicketPrices           map[string]string `gorm:"type:jsonb" json:"ticket_prices"`
 	HistoricalSignificance string
 	VisitorTips            string
 	AccessibilityInfo      string
