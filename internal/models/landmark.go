@@ -62,7 +62,7 @@ type SubmissionLandmark struct {
 
 type SubmissionLandmarkImage struct {
 	ID                   uuid.UUID `gorm:"type:uuid;primaryKey" json:"-"`
-	SubmissionLandmarkID uuid.UUID `gorm:"type:uuid;not null;uniqueIndex" json:"-"`
+	SubmissionLandmarkID uuid.UUID `gorm:"type:uuid;not null" json:"-"`
 	ImageURL             string    `gorm:"type:varchar(500);not null" json:"image_url"`
 	CreatedAt            time.Time `gorm:"not null;default:CURRENT_TIMESTAMP" json:"created_at"`
 	UpdatedAt            time.Time `gorm:"not null;default:CURRENT_TIMESTAMP" json:"updated_at"`
