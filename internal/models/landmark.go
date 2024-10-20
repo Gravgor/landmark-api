@@ -63,9 +63,9 @@ type SubmissionLandmark struct {
 type SubmissionLandmarkImage struct {
 	ID                   uuid.UUID `gorm:"type:uuid;primaryKey" json:"-"`
 	SubmissionLandmarkID uuid.UUID `gorm:"type:uuid;not null;uniqueIndex" json:"-"`
-	ImageURL             string
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	ImageURL             string    `gorm:"type:varchar(500);not null" json:"image_url"`
+	CreatedAt            time.Time `gorm:"not null;default:CURRENT_TIMESTAMP" json:"created_at"`
+	UpdatedAt            time.Time `gorm:"not null;default:CURRENT_TIMESTAMP" json:"updated_at"`
 }
 
 type SubmissionLandmarkDetail struct {
@@ -73,11 +73,11 @@ type SubmissionLandmarkDetail struct {
 	SubmissionLandmarkID   uuid.UUID         `gorm:"type:uuid;not null;uniqueIndex" json:"-"`
 	OpeningHours           map[string]string `gorm:"type:jsonb" json:"opening_hours"`
 	TicketPrices           map[string]string `gorm:"type:jsonb" json:"ticket_prices"`
-	HistoricalSignificance string
-	VisitorTips            string
-	AccessibilityInfo      string
-	CreatedAt              time.Time
-	UpdatedAt              time.Time
+	HistoricalSignificance string            `gorm:"type:text" json:"historical_significance"`
+	VisitorTips            string            `gorm:"type:text" json:"visitor_tips"`
+	AccessibilityInfo      string            `gorm:"type:text" json:"accessibility_info"`
+	CreatedAt              time.Time         `gorm:"not null;default:CURRENT_TIMESTAMP" json:"created_at"`
+	UpdatedAt              time.Time         `gorm:"not null;default:CURRENT_TIMESTAMP" json:"updated_at"`
 }
 
 func (Landmark) TableName() string {
