@@ -5,7 +5,8 @@ import (
 )
 
 type RateLimitConfig struct {
-	Limits map[models.SubscriptionPlan]int
+	Limits       map[models.SubscriptionPlan]int
+	IPBurstLimit int
 }
 
 func NewRateLimitConfig() *RateLimitConfig {
