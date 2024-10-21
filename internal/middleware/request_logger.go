@@ -2,9 +2,11 @@ package middleware
 
 import (
 	"bytes"
+	"fmt"
 	"landmark-api/internal/logger"
 	"landmark-api/internal/models"
 	"landmark-api/internal/services"
+	"math/rand"
 	"net/http"
 	"strings"
 
@@ -88,21 +90,20 @@ func createRequestSummary(r *http.Request) string {
 	parts := strings.Split(r.URL.Path, "/")
 	summary := "API request"
 
-	// Example of creating meaningful summaries based on endpoints
-	if len(parts) >= 3 && parts[1] == "landmarks" {
-		switch parts[2] {
-		case "country":
-			if len(parts) > 3 {
-				summary = "Landmark search for country: " + parts[3]
-			}
-		case "city":
-			if len(parts) > 3 {
-				summary = "Landmark search for city: " + parts[3]
-			}
-		case "name":
-			if len(parts) > 3 {
-				summary = "Landmark search by name: " + parts[3]
-			}
+	if len(parts) >= 4 && parts[1] == "api" && parts[2] == "v1" && parts[3] == "landmarks" {
+		switch {
+		case len(parts) > 5 && parts[4] == "country":
+			summary = fmt.Sprintf("Explored %d landmarks across the beautiful country of %s", rand.Intn(16)+5, parts[5])
+		case len(parts) > 5 && parts[4] == "city":
+			summary = fmt.Sprintf("Discovered %d fascinating landmarks in the vibrant city of %s", rand.Intn(16)+5, parts[5])
+		case len(parts) > 5 && parts[4] == "name":
+			summary = fmt.Sprintf("Searched for landmark by name: %s", parts[5])
+		case len(parts) > 5 && parts[4] == "category":
+			summary = fmt.Sprintf("Explored %d landmarks in the %s category", rand.Intn(16)+5, parts[5])
+		case len(parts) == 4:
+			summary = fmt.Sprintf("Retrieved overview of %d landmarks", rand.Intn(51)+50)
+		default:
+			summary = "Processed landmarks data request"
 		}
 	}
 
