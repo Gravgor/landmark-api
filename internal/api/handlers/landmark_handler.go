@@ -982,20 +982,45 @@ func (h *LandmarkHandler) CreateSubmission(w http.ResponseWriter, r *http.Reques
 func (h *LandmarkHandler) ListPendingSubmissions(w http.ResponseWriter, r *http.Request) {
 	var submissions []models.SubmissionLandmark
 
-	result := h.db.Where("status = ?", "pending").
+	// First fetch landmarks with images only
+	if err := h.db.Where("status = ?", "pending").
 		Preload("Images").
-		Preload("Detail").
-		Find(&submissions)
-
-	if result.Error != nil {
-		log.Printf("Error fetching submissions: %v", result.Error)
+		Find(&submissions).Error; err != nil {
+		log.Printf("Error fetching submissions: %v", err)
 		respondWithError(w, http.StatusInternalServerError, "Failed to fetch pending submissions")
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, submissions)
-}
+	// Create response structure
+	type Response struct {
+		*models.SubmissionLandmark
+		Details *models.SubmissionLandmarkDetail `json:"details"`
+	}
 
+	// Build response with details
+	response := make([]Response, len(submissions))
+	for i, submission := range submissions {
+		var detail models.SubmissionLandmarkDetail
+		// Fetch detail for each submission
+		err := h.db.Where("submission_landmark_id = ?", submission.ID).First(&detail).Error
+
+		response[i] = Response{
+			SubmissionLandmark: &submissions[i],
+			Details:            &detail,
+		}
+
+		// If detail not found, it will be nil in the response
+		if err == gorm.ErrRecordNotFound {
+			response[i].Details = nil
+		} else if err != nil {
+			log.Printf("Error fetching detail for submission %s: %v", submission.ID, err)
+			// You could choose to skip this record or continue with nil details
+			response[i].Details = nil
+		}
+	}
+
+	respondWithJSON(w, http.StatusOK, response)
+}
 func (h *LandmarkHandler) ApproveSubmission(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := uuid.Parse(vars["id"])
