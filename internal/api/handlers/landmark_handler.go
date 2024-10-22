@@ -981,7 +981,7 @@ func (h *LandmarkHandler) CreateSubmission(w http.ResponseWriter, r *http.Reques
 
 func (h *LandmarkHandler) ListPendingSubmissions(w http.ResponseWriter, r *http.Request) {
 	var submissions []models.SubmissionLandmark
-	if err := h.db.Where("status = ?", "pending").Preload("Images").Preload("Detail").Find(&submissions).Error; err != nil {
+	if err := h.db.Where("status = ?", "pending").Preload("Images").Preload("Details").Find(&submissions).Error; err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to fetch pending submissions")
 		return
 	}
