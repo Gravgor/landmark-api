@@ -1004,7 +1004,7 @@ func (h *LandmarkHandler) ApproveSubmission(w http.ResponseWriter, r *http.Reque
 	}
 
 	var submission models.SubmissionLandmark
-	if err := tx.Preload("Images").Preload("Detail").First(&submission, id).Error; err != nil {
+	if err := tx.Preload("Images").Preload("Details").First(&submission, id).Error; err != nil {
 		tx.Rollback()
 		respondWithError(w, http.StatusNotFound, "Submission not found")
 		return
