@@ -55,7 +55,7 @@ type SubmissionLandmark struct {
 	Category    string                    `gorm:"type:varchar(50);not null" json:"category"`
 	Status      string                    // "pending", "approved", or "rejected"
 	Images      []SubmissionLandmarkImage `gorm:"foreignKey:SubmissionLandmarkID" json:"images"`
-	Detail      SubmissionLandmarkDetail  `gorm:"foreignKey:SubmissionLandmarkID" json:"details"`
+	Detail      SubmissionLandmarkDetail  `gorm:"foreignKey:SubmissionLandmarkID;references:ID" json:"details"`
 	CreatedAt   time.Time                 `gorm:"not null;default:CURRENT_TIMESTAMP" json:"created_at"`
 	UpdatedAt   time.Time                 `gorm:"not null;default:CURRENT_TIMESTAMP" json:"updated_at"`
 }
