@@ -45,7 +45,7 @@ type LandmarkDetail struct {
 }
 
 type SubmissionLandmark struct {
-	ID          uuid.UUID                 `gorm:"type:uuid;primaryKey" json:"-"`
+	ID          uuid.UUID                 `gorm:"type:uuid;primaryKey" json:"id"`
 	Name        string                    `gorm:"type:varchar(255);not null" json:"name"`
 	Description string                    `gorm:"type:text;not null" json:"description"`
 	Latitude    float64                   `gorm:"type:decimal(10,8);not null" json:"latitude"`
