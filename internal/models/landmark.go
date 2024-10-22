@@ -68,16 +68,18 @@ type SubmissionLandmarkImage struct {
 	UpdatedAt            time.Time `gorm:"not null;default:CURRENT_TIMESTAMP" json:"updated_at"`
 }
 
+type JSON map[string]string
+
 type SubmissionLandmarkDetail struct {
-	ID                     uuid.UUID         `gorm:"type:uuid;primaryKey" json:"-"`
-	SubmissionLandmarkID   uuid.UUID         `gorm:"type:uuid;not null;uniqueIndex" json:"-"`
-	OpeningHours           map[string]string `gorm:"type:jsonb" json:"opening_hours"`
-	TicketPrices           map[string]string `gorm:"type:jsonb" json:"ticket_prices"`
-	HistoricalSignificance string            `gorm:"type:text" json:"historical_significance"`
-	VisitorTips            string            `gorm:"type:text" json:"visitor_tips"`
-	AccessibilityInfo      string            `gorm:"type:text" json:"accessibility_info"`
-	CreatedAt              time.Time         `gorm:"not null;default:CURRENT_TIMESTAMP" json:"created_at"`
-	UpdatedAt              time.Time         `gorm:"not null;default:CURRENT_TIMESTAMP" json:"updated_at"`
+	ID                     uuid.UUID `gorm:"type:uuid;primaryKey" json:"-"`
+	SubmissionLandmarkID   uuid.UUID `gorm:"type:uuid;not null;uniqueIndex" json:"-"`
+	OpeningHours           JSON      `gorm:"type:jsonb" json:"opening_hours"`
+	TicketPrices           JSON      `gorm:"type:jsonb" json:"ticket_prices"`
+	HistoricalSignificance string    `gorm:"type:text" json:"historical_significance"`
+	VisitorTips            string    `gorm:"type:text" json:"visitor_tips"`
+	AccessibilityInfo      string    `gorm:"type:text" json:"accessibility_info"`
+	CreatedAt              time.Time `gorm:"not null;default:CURRENT_TIMESTAMP" json:"created_at"`
+	UpdatedAt              time.Time `gorm:"not null;default:CURRENT_TIMESTAMP" json:"updated_at"`
 }
 
 func (Landmark) TableName() string {
