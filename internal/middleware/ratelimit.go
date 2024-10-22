@@ -52,13 +52,13 @@ func (rl *RateLimiter) RateLimit(authService services.AuthService, apiUsageServi
 			}
 
 			user, bl := services.UserFromContext(r.Context())
-			if bl == true {
+			if bl != true {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
 
 			subscription, bl := services.SubscriptionFromContext(r.Context())
-			if bl == true {
+			if bl != true {
 				http.Error(w, "Subscription not found", http.StatusForbidden)
 				return
 			}

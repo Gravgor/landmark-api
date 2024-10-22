@@ -195,12 +195,7 @@ func main() {
 			}
 		}
 	}()
-	adminPath, err := tokenService.GetOrCreateAdminToken()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	adminRouter := router.PathPrefix("/" + adminPath + "/api/v1").Subrouter()
+	adminRouter := router.PathPrefix("/admin").Subrouter()
 	adminRouter.Use(middleware.AdminMiddleware(authService))
 	adminRouter.HandleFunc("/landmarks/upload-photo", fileUploadHandler.Upload).Methods("POST")
 	adminRouter.HandleFunc("/landmarks/create", landmarkHandler.CreateLandmark).Methods("POST")
