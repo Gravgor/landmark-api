@@ -195,6 +195,9 @@ func main() {
 	adminRouter.HandleFunc("/landmarks/category", categoryHandler.ListAdminCategories).Methods("GET")
 	adminRouter.HandleFunc("/landmarks/stats", landmarkStatsHandler.GetLandmarkStats).Methods("GET")
 	adminRouter.HandleFunc("/audit-logs", auditLogHandler.ListAuditLogs).Methods("GET")
+	adminRouter.HandleFunc("/submissions/landmarks", landmarkHandler.ListPendingSubmissions).Methods("GET")
+	adminRouter.HandleFunc("/submissions/landmarks/approve/{id}", landmarkHandler.ApproveSubmission).Methods("PUT")
+	adminRouter.HandleFunc("/submission/landmarks/reject/{id}", landmarkHandler.RejectSubmission).Methods("DELETE")
 
 	go func() {
 		for {

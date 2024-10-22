@@ -938,7 +938,6 @@ func (h *LandmarkHandler) CreateSubmission(w http.ResponseWriter, r *http.Reques
 		respondWithError(w, http.StatusInternalServerError, "Failed to create landmark submission")
 		return
 	}
-	log.Print(submissionData.ImageURLs)
 	for i, url := range submissionData.ImageURLs {
 		log.Printf("Processing image %d: %s", i, url)
 		submissionImage := models.SubmissionLandmarkImage{
