@@ -52,6 +52,7 @@ type loginRequest struct {
 // authResponse represents the structure of an authentication response
 type authResponse struct {
 	Token string `json:"token,omitempty"`
+	Admin bool   `json:"admin"`
 	Error string `json:"error,omitempty"`
 }
 
@@ -182,13 +183,16 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.authService.Login(r.Context(), req.Email, req.Password)
+	token, isAdmin, err := h.authService.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
-	resp := authResponse{Token: token}
+	resp := authResponse{
+		Token: token,
+		Admin: isAdmin,
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)

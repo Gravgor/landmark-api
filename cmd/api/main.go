@@ -185,16 +185,6 @@ func main() {
 	subscriptionRouterManage.Use(middleware.AuthMiddleware(authService))
 	subscriptionRouterManage.HandleFunc("/get-billing", stripeHandler.HandleUserBillingInfo).Methods("GET")
 
-	tokenRepo := repository.NewAdminTokenRepository(db)
-	tokenService := services.NewAdminTokenService(tokenRepo)
-	go func() {
-		for {
-			time.Sleep(24 * time.Hour)
-			if _, err := tokenService.GetOrCreateAdminToken(); err != nil {
-				log.Printf("Error updating admin token: %v", err)
-			}
-		}
-	}()
 	adminRouter := router.PathPrefix("/admin").Subrouter()
 	adminRouter.Use(middleware.AdminMiddleware(authService))
 	adminRouter.HandleFunc("/landmarks/upload-photo", fileUploadHandler.Upload).Methods("POST")

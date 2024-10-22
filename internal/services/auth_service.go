@@ -36,7 +36,7 @@ type AuthService interface {
 	Register(ctx context.Context, email, password, name string) (*models.User, error)
 	RegisterSub(ctx context.Context, email, password, name string) (*models.User, error)
 	RegisterWithEmail(ctx context.Context, email string) (*models.User, error)
-	Login(ctx context.Context, email, password string) (string, error)
+	Login(ctx context.Context, email, password string) (token string, isAdmin bool, err error)
 	UpdateUser(ctx context.Context, userID uuid.UUID, name, password string) error
 	VerifyToken(token string) (*models.User, *models.Subscription, error)
 	VerifyTokenAdmin(token string) (*models.User, *models.Subscription, error)
@@ -205,20 +205,22 @@ func (s *authService) GetUserByStripeCustomerID(ctx context.Context, customerID 
 	return user, nil
 }
 
-func (s *authService) Login(ctx context.Context, email, password string) (string, error) {
+func (s *authService) Login(ctx context.Context, email, password string) (string, bool, error) {
 	user, err := s.userRepo.GetByEmail(ctx, email)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
-		return "", ErrInvalidCredentials
+		return "", false, ErrInvalidCredentials
 	}
 
 	subscription, err := s.subscriptionRepo.GetActiveByUserID(ctx, user.ID)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
+
+	isAdmin := user.Role == "admin"
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id":         user.ID.String(),
@@ -228,7 +230,12 @@ func (s *authService) Login(ctx context.Context, email, password string) (string
 		"exp":             time.Now().Add(time.Hour * 24).Unix(),
 	})
 
-	return token.SignedString([]byte(s.jwtSecret))
+	tokenString, err := token.SignedString([]byte(s.jwtSecret))
+	if err != nil {
+		return "", false, err
+	}
+
+	return tokenString, isAdmin, nil
 }
 
 func (s *authService) GetAPIKey(ctx context.Context, userID uuid.UUID) (*models.APIKey, error) {
