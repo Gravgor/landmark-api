@@ -991,56 +991,46 @@ func (h *LandmarkHandler) ListPendingSubmissions(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// Create response structure
-	type ResponseDetail struct {
-		ID                     uuid.UUID         `json:"-"`
-		SubmissionLandmarkID   uuid.UUID         `json:"-"`
-		OpeningHours           map[string]string `json:"opening_hours"`
-		TicketPrices           map[string]string `json:"ticket_prices"`
-		HistoricalSignificance string            `json:"historical_significance"`
-		VisitorTips            string            `json:"visitor_tips"`
-		AccessibilityInfo      string            `json:"accessibility_info"`
-		CreatedAt              time.Time         `json:"created_at"`
-		UpdatedAt              time.Time         `json:"updated_at"`
+	// Get all submission IDs
+	submissionIDs := make([]uuid.UUID, len(submissions))
+	for i, s := range submissions {
+		submissionIDs[i] = s.ID
 	}
 
+	// Fetch all details
+	var details []models.SubmissionLandmarkDetail
+	err := h.db.Model(&models.SubmissionLandmarkDetail{}).
+		Where("submission_landmark_id IN ?", submissionIDs).
+		Find(&details).Error
+
+	if err != nil {
+		log.Printf("Error fetching details: %v", err)
+		// Continue with empty details
+		details = []models.SubmissionLandmarkDetail{}
+	}
+
+	// Create a map for quick detail lookup
+	detailMap := make(map[uuid.UUID]models.SubmissionLandmarkDetail)
+	for _, d := range details {
+		detailMap[d.SubmissionLandmarkID] = d
+	}
+
+	// Create response structure
 	type Response struct {
 		*models.SubmissionLandmark
-		Details *ResponseDetail `json:"details"`
+		Details *models.SubmissionLandmarkDetail `json:"details,omitempty"`
 	}
 
-	// Build response with details
+	// Build final response
 	response := make([]Response, len(submissions))
 	for i, submission := range submissions {
-		var detail models.SubmissionLandmarkDetail
-		// Fetch detail for each submission
-		err := h.db.Where("submission_landmark_id = ?", submission.ID).First(&detail).Error
-
-		if err == nil {
-			// Convert to ResponseDetail
-			responseDetail := &ResponseDetail{
-				ID:                     detail.ID,
-				SubmissionLandmarkID:   detail.SubmissionLandmarkID,
-				OpeningHours:           map[string]string(detail.OpeningHours),
-				TicketPrices:           map[string]string(detail.TicketPrices),
-				HistoricalSignificance: detail.HistoricalSignificance,
-				VisitorTips:            detail.VisitorTips,
-				AccessibilityInfo:      detail.AccessibilityInfo,
-				CreatedAt:              detail.CreatedAt,
-				UpdatedAt:              detail.UpdatedAt,
-			}
-
+		if detail, exists := detailMap[submission.ID]; exists {
+			detailCopy := detail // Make a copy to avoid reference issues
 			response[i] = Response{
 				SubmissionLandmark: &submissions[i],
-				Details:            responseDetail,
-			}
-		} else if err == gorm.ErrRecordNotFound {
-			response[i] = Response{
-				SubmissionLandmark: &submissions[i],
-				Details:            nil,
+				Details:            &detailCopy,
 			}
 		} else {
-			log.Printf("Error fetching detail for submission %s: %v", submission.ID, err)
 			response[i] = Response{
 				SubmissionLandmark: &submissions[i],
 				Details:            nil,

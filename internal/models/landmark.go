@@ -68,8 +68,6 @@ type SubmissionLandmarkImage struct {
 	UpdatedAt            time.Time `gorm:"not null;default:CURRENT_TIMESTAMP" json:"updated_at"`
 }
 
-type JSON map[string]string
-
 type SubmissionLandmarkDetail struct {
 	ID                     uuid.UUID `gorm:"type:uuid;primaryKey" json:"-"`
 	SubmissionLandmarkID   uuid.UUID `gorm:"type:uuid;not null;uniqueIndex" json:"-"`
