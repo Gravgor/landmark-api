@@ -11,12 +11,12 @@ import mimetypes
 from contextlib import ExitStack
 
 # Define the API endpoints and headers
-UPLOAD_URL = "https://api.landmark-api.com/2079a66bb2f2859a721b9987ded608013fb38f95becb9d1e2b6520c5a06b8fd6/api/v1/landmarks/upload-photo"
-CREATE_URL = "https://api.landmark-api.com/2079a66bb2f2859a721b9987ded608013fb38f95becb9d1e2b6520c5a06b8fd6/api/v1/landmarks/create"
+UPLOAD_URL = "https://api.landmark-api.com/admin/landmarks/upload-photo"
+CREATE_URL = "https://api.landmark-api.com/admin/landmarks/create"
 UNSPLASH_URL = "https://api.unsplash.com/search/photos?client_id=CmOoJszifpwLyIhpB_QhjmMZ2Xsvc4SILzJv987G9oo"
 HEADERS = {
     "x-api-key": "43f79790-bc83-47a5-ad99-ee965c27bc34",
-    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Mjk0NTI2MTIsInBsYW5fdHlwZSI6IlBSTyIsInJvbGUiOiJhZG1pbiIsInN1YnNjcmlwdGlvbl9pZCI6IjllYzRiYTcwLThkOTctNDY5OC05ZDllLWM2MTdkZGQyZjljNiIsInVzZXJfaWQiOiJkN2NlY2JhNS1iODFiLTRhMTItYWE3My0zZjcxYjNiZGI2NjMifQ.ZXqRSKl-E2Pc_tfV5vggy7Qco-Ios1UIiYlkCxlmhBw"
+    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Mjk4NTU5NzQsInBsYW5fdHlwZSI6IlBSTyIsInJvbGUiOiJhZG1pbiIsInN1YnNjcmlwdGlvbl9pZCI6IjllYzRiYTcwLThkOTctNDY5OC05ZDllLWM2MTdkZGQyZjljNiIsInVzZXJfaWQiOiJkN2NlY2JhNS1iODFiLTRhMTItYWE3My0zZjcxYjNiZGI2NjMifQ.ACwuBUNs3ydREdqQUCpMbyMVn30ZwQR98rpDGlai8Ow"
 }
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -161,43 +161,98 @@ def process_landmarks(landmarks: List[Dict]):
             except Exception as e:
                 logging.error(f"Failed to remove temporary file {image_path}: {str(e)}")
 
-# Example usage
+# Example United Statesge
 if __name__ == "__main__":
-    landmarks = [
- 
+    landmarks = []
+    landmarks.extend([
         {
             "landmark": {
-                "name": "The Valley of Kings",
-                "description": "A famous archaeological site in Egypt, known for its numerous tombs of pharaohs and nobles from the New Kingdom.",
-                "latitude": 25.7408,
-                "longitude": 32.6010,
-                "country": "Egypt",
-                "city": "Luxor",
-                "category": "Historical Landmark"
+                "name": "Istiqlal Mosque",
+                "description": "The largest mosque in Southeast Asia, located in the capital city, Jakarta.",
+                "latitude": -6.1701,
+                "longitude": 106.8317,
+                "country": "Indonesia",
+                "city": "Jakarta",
+                "category": "Religious Building"
             },
             "landmark_detail": {
                 "opening_hours": {
-                    "Monday": "6:00 AM - 5:00 PM",
-                    "Tuesday": "6:00 AM - 5:00 PM",
-                    "Wednesday": "6:00 AM - 5:00 PM",
-                    "Thursday": "6:00 AM - 5:00 PM",
-                    "Friday": "6:00 AM - 5:00 PM",
-                    "Saturday": "6:00 AM - 5:00 PM",
-                    "Sunday": "6:00 AM - 5:00 PM"
+                    "Monday": "4:00 AM - 10:00 PM",
+                    "Tuesday": "4:00 AM - 10:00 PM",
+                    "Wednesday": "4:00 AM - 10:00 PM",
+                    "Thursday": "4:00 AM - 10:00 PM",
+                    "Friday": "4:00 AM - 10:00 PM",
+                    "Saturday": "4:00 AM - 10:00 PM",
+                    "Sunday": "4:00 AM - 10:00 PM"
+                },
+                "ticket_prices": {
+                    "Adult": "Free",
+                    "Child": "Free"
+                },
+                "historical_significance": "Built to commemorate Indonesian independence.",
+                "visitor_tips": "Dress modestly and be mindful of prayer times.",
+                "accessibility_info": "Fully accessible."
+            }
+        },
+        {
+            "landmark": {
+                "name": "Raja Ampat Islands",
+                "description": "An archipelago renowned for its marine biodiversity and pristine beaches.",
+                "latitude": -0.2346,
+                "longitude": 130.5078,
+                "country": "Indonesia",
+                "city": "Raja Ampat",
+                "category": "Island"
+            },
+            "landmark_detail": {
+                "opening_hours": {
+                    "Monday": "Open 24 hours",
+                    "Tuesday": "Open 24 hours",
+                    "Wednesday": "Open 24 hours",
+                    "Thursday": "Open 24 hours",
+                    "Friday": "Open 24 hours",
+                    "Saturday": "Open 24 hours",
+                    "Sunday": "Open 24 hours"
+                },
+                "ticket_prices": {
+                    "Adult": "$50 (Marine Park Permit)",
+                    "Child": "$50 (Marine Park Permit)"
+                },
+                "historical_significance": "One of the most biodiverse marine habitats on Earth.",
+                "visitor_tips": "Great for snorkeling and diving.",
+                "accessibility_info": "Accessible, but remote."
+            }
+        },
+        {
+            "landmark": {
+                "name": "Taman Mini Indonesia Indah",
+                "description": "A cultural park in Jakarta showcasing Indonesia’s rich heritage.",
+                "latitude": -6.3022,
+                "longitude": 106.8956,
+                "country": "Indonesia",
+                "city": "Jakarta",
+                "category": "Cultural Park"
+            },
+            "landmark_detail": {
+                "opening_hours": {
+                    "Monday": "7:00 AM - 10:00 PM",
+                    "Tuesday": "7:00 AM - 10:00 PM",
+                    "Wednesday": "7:00 AM - 10:00 PM",
+                    "Thursday": "7:00 AM - 10:00 PM",
+                    "Friday": "7:00 AM - 10:00 PM",
+                    "Saturday": "7:00 AM - 10:00 PM",
+                    "Sunday": "7:00 AM - 10:00 PM"
                 },
                 "ticket_prices": {
                     "Adult": "$10",
                     "Child": "$5"
                 },
-                "historical_significance": "The burial site of many pharaohs, including Tutankhamun and Ramses II, dating back to the 16th to 11th century BC.",
-                "visitor_tips": "Purchase a combined ticket to access multiple tombs and consider hiring a guide for deeper insights.",
-                "accessibility_info": "Partially accessible"
+                "historical_significance": "Built in 1975 to promote national pride and unity.",
+                "visitor_tips": "Allocate at least half a day to explore the park.",
+                "accessibility_info": "Fully accessible."
             }
         }
-    ]
-
-
-
+    ])
 
 
 

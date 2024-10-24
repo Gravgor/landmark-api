@@ -211,7 +211,7 @@ func main() {
 	}()
 
 	corsMiddleware := cors.New(cors.Options{
-		AllowedOrigins: []string{"https://landmark-api.com", "http://localhost:3000"},
+		AllowedOrigins: []string{"*"}, // Allow all origins
 		AllowedMethods: []string{
 			http.MethodGet,
 			http.MethodPost,
@@ -226,12 +226,13 @@ func main() {
 			"Content-Type",
 			"X-CSRF-Token",
 			"X-API-Key",
+			"*", // Allow all headers
 		},
 		ExposedHeaders: []string{
 			"Link",
 		},
-		AllowCredentials: true,
-		MaxAge:           300, // Maximum value not ignored by any of major browsers
+		AllowCredentials: false, // Must be false when using AllowedOrigins: ["*"]
+		MaxAge:           300,
 	})
 
 	// Create server with timeouts
