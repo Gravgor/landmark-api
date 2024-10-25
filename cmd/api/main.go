@@ -153,7 +153,6 @@ func main() {
 	contributionRouter.HandleFunc("/submit-landmark", landmarkHandler.CreateSubmission).Methods("POST")
 	contributionRouter.HandleFunc("/submit-photo", fileUploadHandler.SubmitPhotos).Methods("POST")
 
-
 	// API routes (protected)
 	apiRouter := router.PathPrefix("/api/v1").Subrouter()
 	apiRouter.Use(middleware.APIKeyMiddleware(apiKeyService))
@@ -169,10 +168,9 @@ func main() {
 	apiRouter.HandleFunc("/landmarks/category/{category}", landmarkHandler.ListLandmarkByCategory).Methods("GET")
 	apiRouter.HandleFunc("/landmarks/search", landmarkHandler.SearchLandmarks).Methods("POST")
 
-
-	suggestionRouter := router.PathPrefix("/api/v1").Subrouter()
+	suggestionRouter := router.PathPrefix("/api/v1/suggestions").Subrouter()
 	suggestionRouter.Use(middleware.APIKeyMiddleware(apiKeyService))
-	suggestionRouter.HandleFunc("/landmarks/{type}", suggestionHandler.GetSuggestions).Methods("GET").Queries("search", "{search}")
+	suggestionRouter.HandleFunc("/{type}", suggestionHandler.GetSuggestions).Methods("GET").Queries("search", "{search}")
 
 	// User check routes
 	userRouter := router.PathPrefix("/user/api/v1").Subrouter()
