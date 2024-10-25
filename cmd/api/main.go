@@ -99,6 +99,7 @@ func main() {
 
 	authHandler := handlers.NewAuthHandler(authService)
 	landmarkHandler := handlers.NewLandmarkHandler(landmarkService, auditLogService, cacheService, db)
+	suggestionHandler := handlers.NewSuggestionsHandler(db, cacheService)
 
 	rateLimiter := middleware.NewRateLimiter(rateLimitConfig)
 	apiUsageService := services.NewAPIUsageService(apiUsageRepo, subscriptionRepo, rateLimitConfig)
@@ -166,6 +167,7 @@ func main() {
 	apiRouter.HandleFunc("/landmarks/city/{city}", landmarkHandler.ListLandmarksByCity).Methods("GET")
 	apiRouter.HandleFunc("/landmarks/category/{category}", landmarkHandler.ListLandmarkByCategory).Methods("GET")
 	apiRouter.HandleFunc("/landmarks/search", landmarkHandler.SearchLandmarks).Methods("POST")
+	apiRouter.HandleFunc("/landmarks/{type}", suggestionHandler.GetSuggestions).Methods("GET").Queries("search", "{search}")
 
 	// User check routes
 	userRouter := router.PathPrefix("/user/api/v1").Subrouter()
