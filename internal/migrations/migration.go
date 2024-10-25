@@ -1,6 +1,8 @@
 // internal/migrations/landmarks.go
+
 package migrations
 
+/*
 import (
 	"landmark-api/internal/models"
 	"time"
@@ -205,3 +207,4 @@ func MigrateLandmarks(db *gorm.DB) error {
 func newUUID() uuid.UUID {
 	return uuid.New()
 }
+*/
