@@ -5,272 +5,258 @@ import (
 	"encoding/json"
 	"fmt"
 	"landmark-api/internal/models"
-	"landmark-api/internal/services"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 )
 
+// Constants for the handler
+const (
+	minSimilarityThreshold = 0.3
+	defaultCacheDuration   = 5 * time.Minute
+	defaultLimit           = 10
+	searchTimeout          = 3 * time.Second
+)
+
+// SearchResult represents the basic search result
+type SearchResult struct {
+	Value      string  `json:"value"`
+	Similarity float64 `json:"similarity"`
+}
+
+// SuggestionResponse holds the structured response for different search types
+type SuggestionResponse struct {
+	Results []string `json:"results"`
+}
+
+// SuggestionsHandler handles all suggestion-related requests
 type SuggestionsHandler struct {
 	db           *gorm.DB
-	cacheService services.CacheService
+	cacheService CacheService
+	config       *SuggestionsConfig
 }
 
-// SuggestionResponse represents the structure expected by the frontend
-type SuggestionResponse struct {
-	Names      []string `json:"names"`
-	Countries  []string `json:"countries"`
-	Categories []string `json:"categories"`
-	Cities     []string `json:"cities"`
+// SuggestionsConfig contains configuration for the suggestions handler
+type SuggestionsConfig struct {
+	MaxResults         int
+	CacheDuration      time.Duration
+	MinSimilarity      float64
+	EnabledSearchTypes []string
+	Weights            SearchWeights
 }
 
-func NewSuggestionsHandler(db *gorm.DB, cacheService services.CacheService) *SuggestionsHandler {
-	return &SuggestionsHandler{
+// SearchWeights contains weights for different search methods
+type SearchWeights struct {
+	ExactMatch  float64
+	Trigram     float64
+	Metaphone   float64
+	Levenshtein float64
+}
+
+// CacheService interface defines the required caching methods
+type CacheService interface {
+	Get(ctx context.Context, key string) (string, error)
+	Set(ctx context.Context, key string, value interface{}, duration time.Duration) error
+}
+
+// NewSuggestionsHandler creates a new instance of SuggestionsHandler
+func NewSuggestionsHandler(db *gorm.DB, cacheService CacheService, config *SuggestionsConfig) (*SuggestionsHandler, error) {
+
+	handler := &SuggestionsHandler{
 		db:           db,
 		cacheService: cacheService,
+		config:       config,
 	}
+
+	if err := handler.Initialize(); err != nil {
+		return nil, fmt.Errorf("failed to initialize handler: %v", err)
+	}
+
+	return handler, nil
 }
 
-// GetSuggestions handles all types of suggestions (names, countries, categories, cities)
 func (h *SuggestionsHandler) GetSuggestions(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+
+	// Extract parameters
 	vars := mux.Vars(r)
-	searchType := vars["type"] // will be "names", "countries", "categories", or "cities"
+	searchType := vars["type"]
 	searchTerm := r.URL.Query().Get("search")
 
+	// Validate search type
+	if !isValidSearchType(searchType) {
+		respondWithError(w, http.StatusBadRequest, "Invalid search type")
+		return
+	}
+
+	// Handle empty search term
 	if searchTerm == "" {
-		respondWithJSON(w, http.StatusOK, SuggestionResponse{
-			Names:      []string{},
-			Countries:  []string{},
-			Categories: []string{},
-			Cities:     []string{},
-		})
+		respondWithJSON(w, http.StatusOK, SuggestionResponse{Results: []string{}})
 		return
 	}
 
-	// Get subscription from context
-	subscription, ok := services.SubscriptionFromContext(ctx)
-	if !ok {
-		respondWithError(w, http.StatusForbidden, "Subscription not found")
-		return
-	}
-
-	cacheKey := h.getCacheKey(fmt.Sprintf("suggestions:%s", searchType),
-		searchTerm,
-		string(subscription.PlanType))
-
-	// Try to get from cache first
-	if cachedData, err := h.cacheService.Get(ctx, cacheKey); err == nil {
-		var response SuggestionResponse
-		if err := json.Unmarshal([]byte(cachedData), &response); err == nil {
-			w.Header().Set("X-Cache", "HIT")
-			respondWithJSON(w, http.StatusOK, response)
-			return
-		}
-	}
-
-	response, err := h.fetchSuggestions(ctx, searchType, searchTerm, subscription)
+	// Perform search
+	results, err := h.searchLandmarks(ctx, searchType, searchTerm)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Error fetching suggestions")
+		respondWithError(w, http.StatusInternalServerError, "Error performing search")
 		return
 	}
 
-	// Cache the response
-	h.cacheService.Set(ctx, cacheKey, response, 5*time.Minute) // shorter cache time for suggestions
-	w.Header().Set("X-Cache", "MISS")
-	respondWithJSON(w, http.StatusOK, response)
+	respondWithJSON(w, http.StatusOK, SuggestionResponse{Results: results})
 }
 
-func (h *SuggestionsHandler) fetchSuggestions(ctx context.Context, searchType, searchTerm string, subscription *models.Subscription) (SuggestionResponse, error) {
-	var response SuggestionResponse
-	limit := 10 // Limit suggestions to 10 items
+func (h *SuggestionsHandler) searchLandmarks(ctx context.Context, searchType, searchTerm string) ([]string, error) {
+	var results []string
 
-	switch searchType {
-	case "names":
-		var names []string
-		err := h.db.Model(&models.Landmark{}).
-			Select("DISTINCT name").
-			Where("name ILIKE ?", "%"+searchTerm+"%").
-			Limit(limit).
-			Pluck("name", &names).Error
-		if err != nil {
-			return response, err
-		}
-		response.Names = names
-
-	case "countries":
-		var countries []string
-		err := h.db.Model(&models.Landmark{}).
-			Select("DISTINCT country").
-			Where("country ILIKE ?", "%"+searchTerm+"%").
-			Limit(limit).
-			Pluck("country", &countries).Error
-		if err != nil {
-			return response, err
-		}
-		response.Countries = countries
-
-	case "categories":
-		var categories []string
-		err := h.db.Model(&models.Landmark{}).
-			Select("DISTINCT category").
-			Where("category ILIKE ?", "%"+searchTerm+"%").
-			Limit(limit).
-			Pluck("category", &categories).Error
-		if err != nil {
-			return response, err
-		}
-		response.Categories = categories
-
-	case "cities":
-		var cities []string
-		err := h.db.Model(&models.Landmark{}).
-			Select("DISTINCT city").
-			Where("city ILIKE ?", "%"+searchTerm+"%").
-			Limit(limit).
-			Pluck("city", &cities).Error
-		if err != nil {
-			return response, err
-		}
-		response.Cities = cities
+	// Build the search condition based on search type
+	column := getColumnForSearchType(searchType)
+	if column == "" {
+		return nil, fmt.Errorf("invalid search type")
 	}
 
-	return response, nil
-}
-
-// Optional: Add a method to get combined suggestions
-func (h *SuggestionsHandler) GetCombinedSuggestions(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	searchTerm := r.URL.Query().Get("search")
-
+	// Clean and prepare the search term
+	searchTerm = strings.TrimSpace(searchTerm)
 	if searchTerm == "" {
-		respondWithJSON(w, http.StatusOK, SuggestionResponse{
-			Names:      []string{},
-			Countries:  []string{},
-			Categories: []string{},
-			Cities:     []string{},
-		})
-		return
+		return []string{}, nil
 	}
 
-	subscription, ok := services.SubscriptionFromContext(ctx)
-	if !ok {
-		respondWithError(w, http.StatusForbidden, "Subscription not found")
-		return
+	// Create a more lenient search pattern
+	searchPattern := "%" + strings.ToLower(searchTerm) + "%"
+
+	// Query with additional logging and error handling
+	query := h.db.WithContext(ctx).
+		Model(&models.Landmark{}).
+		Where(fmt.Sprintf("LOWER(%s) LIKE ?", column), searchPattern).
+		Where("deleted_at IS NULL"). // Add soft delete check if you're using it
+		Order(column).
+		Distinct(column)
+
+	err := query.Pluck(column, &results).Error
+	if err != nil {
+		return nil, fmt.Errorf("database query failed: %w", err)
 	}
 
-	cacheKey := h.getCacheKey("suggestions:combined", searchTerm, string(subscription.PlanType))
+	// If no results found, try a more lenient search
+	if len(results) == 0 {
+		// Try searching with each word separately
+		words := strings.Fields(searchTerm)
+		for _, word := range words {
+			pattern := "%" + strings.ToLower(word) + "%"
+			var tempResults []string
 
-	// Try cache first
-	if cachedData, err := h.cacheService.Get(ctx, cacheKey); err == nil {
-		var response SuggestionResponse
-		if err := json.Unmarshal([]byte(cachedData), &response); err == nil {
-			w.Header().Set("X-Cache", "HIT")
-			respondWithJSON(w, http.StatusOK, response)
-			return
+			err := h.db.WithContext(ctx).
+				Model(&models.Landmark{}).
+				Where(fmt.Sprintf("LOWER(%s) LIKE ?", column), pattern).
+				Where("deleted_at IS NULL").
+				Order(column).
+				Distinct(column).
+				Pluck(column, &tempResults).
+				Error
+
+			if err != nil {
+				continue
+			}
+
+			results = append(results, tempResults...)
 		}
-	}
 
-	// Fetch all types of suggestions concurrently
-	response := SuggestionResponse{}
-	limit := 5 // Reduced limit for combined results
-
-	// Using channels for concurrent fetching
-	namesCh := make(chan []string)
-	countriesCh := make(chan []string)
-	categoriesCh := make(chan []string)
-	citiesCh := make(chan []string)
-	errorCh := make(chan error)
-
-	go func() {
-		var names []string
-		err := h.db.Model(&models.Landmark{}).
-			Select("DISTINCT name").
-			Where("name ILIKE ?", "%"+searchTerm+"%").
-			Limit(limit).
-			Pluck("name", &names).Error
-		if err != nil {
-			errorCh <- err
-			return
-		}
-		namesCh <- names
-	}()
-
-	go func() {
-		var countries []string
-		err := h.db.Model(&models.Landmark{}).
-			Select("DISTINCT country").
-			Where("country ILIKE ?", "%"+searchTerm+"%").
-			Limit(limit).
-			Pluck("country", &countries).Error
-		if err != nil {
-			errorCh <- err
-			return
-		}
-		countriesCh <- countries
-	}()
-
-	go func() {
-		var categories []string
-		err := h.db.Model(&models.Landmark{}).
-			Select("DISTINCT category").
-			Where("category ILIKE ?", "%"+searchTerm+"%").
-			Limit(limit).
-			Pluck("category", &categories).Error
-		if err != nil {
-			errorCh <- err
-			return
-		}
-		categoriesCh <- categories
-	}()
-
-	go func() {
-		var cities []string
-		err := h.db.Model(&models.Landmark{}).
-			Select("DISTINCT city").
-			Where("city ILIKE ?", "%"+searchTerm+"%").
-			Limit(limit).
-			Pluck("city", &cities).Error
-		if err != nil {
-			errorCh <- err
-			return
-		}
-		citiesCh <- cities
-	}()
-
-	// Collect results with timeout
-	timeout := time.After(3 * time.Second)
-	for i := 0; i < 4; i++ {
-		select {
-		case names := <-namesCh:
-			response.Names = names
-		case countries := <-countriesCh:
-			response.Countries = countries
-		case categories := <-categoriesCh:
-			response.Categories = categories
-		case cities := <-citiesCh:
-			response.Cities = cities
-		case err := <-errorCh:
-			respondWithError(w, http.StatusInternalServerError, "Error fetching suggestions: "+err.Error())
-			return
-		case <-timeout:
-			respondWithError(w, http.StatusGatewayTimeout, "Timeout fetching suggestions")
-			return
+		// Remove duplicates if any were found in the second pass
+		if len(results) > 0 {
+			seen := make(map[string]bool)
+			unique := make([]string, 0, len(results))
+			for _, result := range results {
+				if !seen[result] {
+					seen[result] = true
+					unique = append(unique, result)
+				}
+			}
+			results = unique
 		}
 	}
 
-	// Cache the combined response
-	h.cacheService.Set(ctx, cacheKey, response, 5*time.Minute)
-	w.Header().Set("X-Cache", "MISS")
-	respondWithJSON(w, http.StatusOK, response)
+	// Limit results if configured
+	if h.config != nil && h.config.MaxResults > 0 && len(results) > h.config.MaxResults {
+		results = results[:h.config.MaxResults]
+	}
+
+	return results, nil
 }
 
-func (h *SuggestionsHandler) getCacheKey(parts ...string) string {
-	key := "suggestions"
-	for _, part := range parts {
-		key += ":" + part
+// Utility functions
+func getColumnForSearchType(searchType string) string {
+	switch searchType {
+	case "name":
+		return "name"
+	case "country":
+		return "country"
+	case "category":
+		return "category"
+	case "city":
+		return "city"
+	default:
+		return ""
 	}
-	return key
+}
+
+func isValidSearchType(searchType string) bool {
+	validTypes := map[string]bool{
+		"name":     true,
+		"country":  true,
+		"category": true,
+		"city":     true,
+	}
+	return validTypes[searchType]
+}
+
+func (h *SuggestionsHandler) getEmptyResponse(searchType string) SuggestionResponse {
+	var response SuggestionResponse
+	response.Results = []string{}
+	return response
+}
+
+func (h *SuggestionsHandler) buildCacheKey(parts ...string) string {
+	return fmt.Sprintf("suggestions:%s", strings.Join(parts, ":"))
+}
+
+func (h *SuggestionsHandler) cacheResponse(ctx context.Context, key string, response SuggestionResponse) error {
+	data, err := json.Marshal(response)
+	if err != nil {
+		return err
+	}
+	return h.cacheService.Set(ctx, key, string(data), h.config.CacheDuration)
+}
+
+// Initialize function for setting up necessary database extensions and indexes
+func (h *SuggestionsHandler) Initialize() error {
+	// Enable PostgreSQL extensions
+	extensions := []string{
+		"CREATE EXTENSION IF NOT EXISTS pg_trgm;",
+		"CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;",
+		"CREATE EXTENSION IF NOT EXISTS unaccent;",
+	}
+
+	for _, ext := range extensions {
+		if err := h.db.Exec(ext).Error; err != nil {
+			return fmt.Errorf("failed to create extension: %v", err)
+		}
+	}
+
+	// Create indexes for each searchable column
+	indexes := []string{
+		"CREATE INDEX IF NOT EXISTS idx_landmarks_name_trgm ON landmarks USING gin (name gin_trgm_ops);",
+		"CREATE INDEX IF NOT EXISTS idx_landmarks_country_trgm ON landmarks USING gin (country gin_trgm_ops);",
+		"CREATE INDEX IF NOT EXISTS idx_landmarks_category_trgm ON landmarks USING gin (category gin_trgm_ops);",
+		"CREATE INDEX IF NOT EXISTS idx_landmarks_city_trgm ON landmarks USING gin (city gin_trgm_ops);",
+	}
+
+	for _, idx := range indexes {
+		if err := h.db.Exec(idx).Error; err != nil {
+			return fmt.Errorf("failed to create index: %v", err)
+		}
+	}
+
+	return nil
 }

@@ -99,7 +99,17 @@ func main() {
 
 	authHandler := handlers.NewAuthHandler(authService)
 	landmarkHandler := handlers.NewLandmarkHandler(landmarkService, auditLogService, cacheService, db)
-	suggestionHandler := handlers.NewSuggestionsHandler(db, cacheService)
+
+	config := &handlers.SuggestionsConfig{
+		MaxResults:         15,
+		MinSimilarity:      50,
+		EnabledSearchTypes: []string{"city", "country", "category", "name"},
+		CacheDuration:      5 * time.Minute,
+	}
+	suggestionHandler, err := handlers.NewSuggestionsHandler(db, cacheService, config)
+	if err != nil {
+		log.Fatalf("Failed to initialize search capabilities: %v", err)
+	}
 
 	rateLimiter := middleware.NewRateLimiter(rateLimitConfig)
 	apiUsageService := services.NewAPIUsageService(apiUsageRepo, subscriptionRepo, rateLimitConfig)
