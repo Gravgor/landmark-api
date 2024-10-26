@@ -181,7 +181,11 @@ func main() {
 	suggestionRouter := router.PathPrefix("/api/v1/suggestions").Subrouter()
 	suggestionRouter.Use(middleware.APIKeyMiddleware(apiKeyService))
 	suggestionRouter.HandleFunc("/{type}", suggestionHandler.GetSuggestions).Methods("GET").Queries("search", "{search}")
-
+	suggestionRouter.HandleFunc("/landmarks/{id}", landmarkHandler.GetLandmark).Methods("GET")
+	suggestionRouter.HandleFunc("/landmarks/country/{country}", landmarkHandler.ListLandmarksByCountry).Methods("GET")
+	suggestionRouter.HandleFunc("/landmarks/name/{name}", landmarkHandler.ListLandmarksByName).Methods("GET")
+	suggestionRouter.HandleFunc("/landmarks/city/{city}", landmarkHandler.ListLandmarksByCity).Methods("GET")
+	suggestionRouter.HandleFunc("/landmarks/category/{category}", landmarkHandler.ListLandmarkByCategory).Methods("GET")
 	// User check routes
 	userRouter := router.PathPrefix("/user/api/v1").Subrouter()
 	userRouter.Use(middleware.AuthMiddleware(authService))
