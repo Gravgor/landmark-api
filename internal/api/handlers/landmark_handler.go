@@ -520,7 +520,7 @@ func (h *LandmarkHandler) SearchLandmarks(w http.ResponseWriter, r *http.Request
 	}
 
 	var landmarks []models.Landmark
-	if err := h.db.Find(&landmarks).Error; err != nil {
+	if err := h.db.Model(&models.Landmark{}).Preload("Images").Find(&landmarks).Error; err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Error fetching landmarks")
 		return
 	}
