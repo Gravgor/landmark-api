@@ -4,6 +4,8 @@ go 1.23.2
 
 require (
 	github.com/rs/cors v1.11.1
+	github.com/sendgrid/sendgrid-go v3.16.0+incompatible
+	github.com/stripe/stripe-go/v72 v72.122.0
 	github.com/swaggo/http-swagger v1.3.4
 	github.com/swaggo/swag v1.16.3
 )
@@ -20,8 +22,6 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/sendgrid/rest v2.6.9+incompatible // indirect
-	github.com/sendgrid/sendgrid-go v3.16.0+incompatible // indirect
-	github.com/stripe/stripe-go/v72 v72.122.0 // indirect
 	github.com/swaggo/files v1.0.1 // indirect
 	golang.org/x/tools v0.26.0 // indirect
 )
@@ -40,11 +40,11 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/redis/go-redis/v9 v9.6.1
 	github.com/sirupsen/logrus v1.9.3
-	golang.org/x/crypto v0.28.0
-	golang.org/x/net v0.30.0 // indirect
-	golang.org/x/sync v0.8.0 // indirect
-	golang.org/x/sys v0.26.0 // indirect
-	golang.org/x/text v0.19.0 // indirect
+	golang.org/x/crypto v0.36.0
+	golang.org/x/net v0.38.0 // indirect
+	golang.org/x/sync v0.12.0 // indirect
+	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/text v0.23.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/driver/postgres v1.5.9
 	gorm.io/gorm v1.25.12
